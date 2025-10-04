@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { openrouter } from "@/lib/openrouter";
 import { generateText } from "ai";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "@/convex/_generated/api";
 import { promises as fs } from "fs";
 import path from "path";
 
@@ -23,47 +25,68 @@ interface TestCasesData {
   updatedAt: number;
 }
 
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 const TEST_CASES_FILE = path.join(process.cwd(), "data", "testcases.json");
 
-async function ensureTestCasesFile() {
-  try {
-    await fs.access(path.dirname(TEST_CASES_FILE));
-  } catch {
-    await fs.mkdir(path.dirname(TEST_CASES_FILE), { recursive: true });
-  }
-  
-  try {
-    await fs.access(TEST_CASES_FILE);
-  } catch {
-    await fs.writeFile(TEST_CASES_FILE, JSON.stringify({}));
-  }
-}
-
 async function getTestCases(problemSlug: string): Promise<TestCasesData | null> {
-  await ensureTestCasesFile();
-  const data = await fs.readFile(TEST_CASES_FILE, "utf-8");
-  const testCasesMap = JSON.parse(data);
-  return testCasesMap[problemSlug] || null;
+  try {
+    // First try to get from Convex
+    const result = await convex.query(api.problems.getTestCases, {
+      problemSlug,
+    });
+    
+    if (result) {
+      return result;
+    }
+    
+    // If not found in Convex, check JSON file and migrate
+    try {
+      const data = await fs.readFile(TEST_CASES_FILE, "utf-8");
+      const testCasesMap = JSON.parse(data);
+      const jsonData = testCasesMap[problemSlug];
+      
+      if (jsonData) {
+        console.log(`Migrating test cases for ${problemSlug} from JSON to Convex`);
+        // Migrate to Convex
+        await convex.mutation(api.problems.createOrUpdateTestCases, {
+          problemSlug,
+          testCases: jsonData.testCases,
+        });
+        
+        // Return the migrated data
+        return await convex.query(api.problems.getTestCases, {
+          problemSlug,
+        });
+      }
+    } catch (jsonError) {
+      // JSON file doesn't exist or is invalid, that's fine
+      console.log("No JSON test cases file found, skipping migration");
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("Error fetching test cases from Convex:", error);
+    return null;
+  }
 }
 
 async function saveTestCases(problemSlug: string, testCases: TestCase[]): Promise<TestCasesData> {
-  await ensureTestCasesFile();
-  const data = await fs.readFile(TEST_CASES_FILE, "utf-8");
-  const testCasesMap = JSON.parse(data);
-  
-  const now = Date.now();
-  const testCasesData: TestCasesData = {
-    _id: `testcases_${problemSlug}_${now}`,
-    problemSlug,
-    testCases,
-    createdAt: now,
-    updatedAt: now,
-  };
-  
-  testCasesMap[problemSlug] = testCasesData;
-  await fs.writeFile(TEST_CASES_FILE, JSON.stringify(testCasesMap, null, 2));
-  
-  return testCasesData;
+  try {
+    const testCaseId = await convex.mutation(api.problems.createOrUpdateTestCases, {
+      problemSlug,
+      testCases,
+    });
+    
+    // Fetch the saved data to return the complete object
+    const savedData = await convex.query(api.problems.getTestCases, {
+      problemSlug,
+    });
+    
+    return savedData!;
+  } catch (error) {
+    console.error("Error saving test cases to Convex:", error);
+    throw error;
+  }
 }
 
 export async function GET(
