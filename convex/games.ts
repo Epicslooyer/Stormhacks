@@ -5,6 +5,7 @@ import type { DatabaseReader } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
 
 const PRESENCE_TTL = 1000 * 15;
+const CURSOR_TTL = 1000 * 10;
 
 async function getGameBySlug(
 	db: DatabaseReader,
@@ -168,6 +169,51 @@ export const heartbeatPresence = mutation({
 	},
 });
 
+export const updateCursorPosition = mutation({
+	args: {
+		slug: v.string(),
+		clientId: v.string(),
+		lineNumber: v.number(),
+		column: v.number(),
+	},
+	handler: async (ctx, args) => {
+		const game = await getGameBySlug(ctx.db, args.slug);
+		if (!game) {
+			throw new Error("Game not found");
+		}
+		const userId = await getAuthUserId(ctx);
+		const now = Date.now();
+		const lineNumber = Math.max(1, Math.floor(args.lineNumber));
+		const column = Math.max(1, Math.floor(args.column));
+		const existing = await ctx.db
+			.query("cursorPositions")
+			.withIndex("by_game_client", (q) =>
+				q.eq("gameId", game._id).eq("clientId", args.clientId),
+			)
+			.unique();
+		if (existing) {
+			await ctx.db.patch(existing._id, {
+				lineNumber,
+				column,
+				updatedAt: now,
+				userId: userId ?? undefined,
+			});
+			return { updated: true };
+		}
+
+		await ctx.db.insert("cursorPositions", {
+			gameId: game._id,
+			clientId: args.clientId,
+			userId: userId ?? undefined,
+			lineNumber,
+			column,
+			updatedAt: now,
+		});
+
+		return { updated: false };
+	},
+});
+
 export const leaveGame = mutation({
 	args: {
 		slug: v.string(),
@@ -188,6 +234,15 @@ export const leaveGame = mutation({
 			return { removed: false };
 		}
 		await ctx.db.delete(existing._id);
+		const cursor = await ctx.db
+			.query("cursorPositions")
+			.withIndex("by_game_client", (q) =>
+				q.eq("gameId", game._id).eq("clientId", args.clientId),
+			)
+			.unique();
+		if (cursor) {
+			await ctx.db.delete(cursor._id);
+		}
 		return { removed: true };
 	},
 });
@@ -215,5 +270,31 @@ export const activePresence = query({
 				lastSeen: presence.updatedAt,
 			})),
 		};
+	},
+});
+
+export const activeCursorPositions = query({
+	args: {
+		slug: v.string(),
+	},
+	handler: async (ctx, args) => {
+		const game = await getGameBySlug(ctx.db, args.slug);
+		if (!game) {
+			return [];
+		}
+		const cutoff = Date.now() - CURSOR_TTL;
+		const cursors = await ctx.db
+			.query("cursorPositions")
+			.withIndex("by_game", (q) => q.eq("gameId", game._id))
+			.collect();
+		return cursors
+			.filter((cursor) => cursor.updatedAt >= cutoff)
+			.map((cursor) => ({
+				clientId: cursor.clientId,
+				userId: cursor.userId ?? null,
+				lineNumber: cursor.lineNumber,
+				column: cursor.column,
+				lastUpdated: cursor.updatedAt,
+			}));
 	},
 });

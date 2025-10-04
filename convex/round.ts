@@ -1,18 +1,12 @@
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
-import type { DatabaseReader } from "./_generated/server";
-import type { Doc } from "./_generated/dataModel";
-
+import { mutation } from "./_generated/server";
 
 export const updateRound = mutation({
-    args: {
-        gameId: v.id("round"),
-        slug: v.string(),
-        newCode : v.string()
-    },
-      handler: async (ctx, { gameId, slug, newCode }) => {
-
-    await ctx.db.patch(gameId, { code: newCode });
-  }
+	args: {
+		gameId: v.id("round"),
+		newCode: v.string(),
+	},
+	handler: async (ctx, { gameId, newCode }) => {
+		await ctx.db.patch(gameId, { code: newCode });
+	},
 });

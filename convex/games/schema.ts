@@ -41,4 +41,14 @@ export const gameTables = {
 	})
 		.index("by_game", ["gameId", "updatedAt"])
 		.index("by_game_client", ["gameId", "clientId"]),
+	cursorPositions: defineTable({
+		gameId: v.id("games"),
+		clientId: v.string(),
+		userId: v.optional(v.id("users")),
+		lineNumber: v.number(),
+		column: v.number(),
+		updatedAt: v.number(),
+	})
+		.index("by_game", ["gameId", "updatedAt"])
+		.index("by_game_client", ["gameId", "clientId"]),
 };

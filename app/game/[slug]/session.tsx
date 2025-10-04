@@ -15,13 +15,16 @@ import {
 	Wrap,
 	WrapItem,
 } from "@chakra-ui/react";
+import { useMutation } from "convex/react";
 import dynamic from "next/dynamic";
 import type { ChangeEvent } from "react";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useGameConnection } from "@/components/useGameConnection";
 import { useProblemDetails } from "@/components/useProblemDetails";
 import { useColorModeValue } from "@/components/ui/color-mode";
 import type { CodeSnippet } from "leetcode-query";
+import { api } from "@/convex/_generated/api";
+import type { editor as MonacoEditorNS, IDisposable } from "monaco-editor";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
 	ssr: false,
@@ -57,6 +60,95 @@ export default function GameSession({ slug }: { slug: string }) {
 	const [code, setCode] = useState("");
 	const userEditedRef = useRef(false);
 	const languageSelectId = useId();
+	const updateCursorPosition = useMutation(api.games.updateCursorPosition);
+	const editorRef = useRef<MonacoEditorNS.IStandaloneCodeEditor | null>(null);
+	const cursorListenerRef = useRef<IDisposable | null>(null);
+	const pendingCursorRef = useRef<{ lineNumber: number; column: number } | null>(
+		null,
+	);
+	const lastSentCursorRef = useRef<{
+		lineNumber: number;
+		column: number;
+	} | null>(null);
+	const lastSentCursorAtRef = useRef(0);
+
+	const handleEditorMount = useCallback(
+		(editorInstance: MonacoEditorNS.IStandaloneCodeEditor) => {
+			editorRef.current = editorInstance;
+			cursorListenerRef.current?.dispose();
+			cursorListenerRef.current = editorInstance.onDidChangeCursorPosition(
+				(event) => {
+					pendingCursorRef.current = {
+						lineNumber: event.position.lineNumber,
+						column: event.position.column,
+					};
+				},
+			);
+			const initialPosition = editorInstance.getPosition();
+			if (initialPosition) {
+				pendingCursorRef.current = {
+					lineNumber: initialPosition.lineNumber,
+					column: initialPosition.column,
+				};
+			}
+		},
+		[],
+	);
+
+	useEffect(() => {
+		return () => {
+			cursorListenerRef.current?.dispose();
+			cursorListenerRef.current = null;
+			editorRef.current = null;
+		};
+	}, []);
+
+	useEffect(() => {
+		void resolvedSlug;
+		void clientId;
+		pendingCursorRef.current = null;
+		lastSentCursorRef.current = null;
+		lastSentCursorAtRef.current = 0;
+	}, [resolvedSlug, clientId]);
+
+	useEffect(() => {
+		const interval = setInterval(() => {
+			const pending = pendingCursorRef.current;
+			if (!pending) {
+				return;
+			}
+			const previous = lastSentCursorRef.current;
+			const now = Date.now();
+			if (
+				previous &&
+				previous.lineNumber === pending.lineNumber &&
+				previous.column === pending.column &&
+				now - lastSentCursorAtRef.current < 5000
+			) {
+				return;
+			}
+			if (now - lastSentCursorAtRef.current < 250) {
+				return;
+			}
+			lastSentCursorAtRef.current = now;
+			const payload = {
+				lineNumber: pending.lineNumber,
+				column: pending.column,
+			};
+			lastSentCursorRef.current = payload;
+			void updateCursorPosition({
+				slug: resolvedSlug,
+				clientId,
+				lineNumber: payload.lineNumber,
+				column: payload.column,
+			})
+				.catch(() => {
+					lastSentCursorRef.current = previous;
+					lastSentCursorAtRef.current = now - 5000;
+				});
+		}, 300);
+		return () => clearInterval(interval);
+	}, [clientId, resolvedSlug, updateCursorPosition]);
 
 	useEffect(() => {
 		if (problemSlug === undefined) return;
@@ -446,6 +538,7 @@ export default function GameSession({ slug }: { slug: string }) {
 							language={mapLangSlugToMonaco(selectedLanguage)}
 							value={code}
 							onChange={handleEditorChange}
+				onMount={handleEditorMount}
 							options={{
 								automaticLayout: true,
 								fontSize: 14,
