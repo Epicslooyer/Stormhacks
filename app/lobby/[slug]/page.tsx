@@ -3,8 +3,8 @@ import LobbySession from "./session";
 export default async function LobbySlugPage({
 	params,
 }: {
-	params: Promise<{ slug: string }> | { slug: string };
+	params: Promise<{ slug: string }>;
 }) {
-	const resolvedParams = await params;
-	return <LobbySession slug={resolvedParams.slug} />;
+	const { slug } = await params;
+	return <LobbySession slug={slug} />;
 }

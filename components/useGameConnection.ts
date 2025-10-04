@@ -15,8 +15,10 @@ export function useGameConnection(initialSlug: string, basePath: string) {
 	const getOrCreateGame = useMutation(api.games.getOrCreateGame);
 	const heartbeat = useMutation(api.games.heartbeatPresence);
 	const leaveGame = useMutation(api.games.leaveGame);
+	const finalizeStart = useMutation(api.games.completeGameStart);
 	const presence = useQuery(api.games.activePresence, { slug });
 	const game = useQuery(api.games.getGame, { slug });
+	const [countdownMs, setCountdownMs] = useState<number | null>(null);
 
 	useEffect(() => {
 		slugRef.current = slug;
@@ -50,10 +52,44 @@ export function useGameConnection(initialSlug: string, basePath: string) {
 		};
 	}, [basePath, clientId, getOrCreateGame, heartbeat, leaveGame, router, slug]);
 
+	useEffect(() => {
+		if (!game || game.status !== "countdown" || game.countdownEndsAt === null) {
+			setCountdownMs(null);
+			return;
+		}
+		const endsAt = game.countdownEndsAt;
+		const update = () => {
+			setCountdownMs(Math.max(0, endsAt - Date.now()));
+		};
+		update();
+		const interval = setInterval(update, 200);
+		return () => {
+			clearInterval(interval);
+		};
+	}, [game]);
+
+	useEffect(() => {
+		if (!game || game.status !== "countdown" || game.countdownEndsAt === null) {
+			return;
+		}
+		const endsAt = game.countdownEndsAt;
+		const now = Date.now();
+		const delay = Math.max(0, endsAt - now);
+		const timeout = setTimeout(() => {
+			void finalizeStart({ slug }).catch(() => {
+				// best-effort finalize
+			});
+		}, delay + 50);
+		return () => clearTimeout(timeout);
+	}, [finalizeStart, game, slug]);
+
 	return {
 		slug,
 		clientId,
 		presenceCount: presence?.count ?? 0,
+		participants: presence?.participants ?? [],
 		game,
+		countdownMs,
+		viewerId: game?.viewerId ?? null,
 	};
 }

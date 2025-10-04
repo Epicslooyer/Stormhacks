@@ -43,7 +43,10 @@ export const getGame = query({
 		slug: v.string(),
 	},
 	handler: async (ctx, args) => {
-		const game = await getGameBySlug(ctx.db, args.slug);
+		const [game, viewerId] = await Promise.all([
+			getGameBySlug(ctx.db, args.slug),
+			getAuthUserId(ctx),
+		]);
 		if (!game) return null;
 		return {
 			_id: game._id,
@@ -52,11 +55,42 @@ export const getGame = query({
 			status: game.status,
 			createdAt: game.createdAt,
 			createdBy: game.createdBy,
+			countdownEndsAt: game.countdownEndsAt ?? null,
+			viewerId,
 		};
 	},
 });
 
-export const startGame = mutation({
+export const beginCountdown = mutation({
+	args: {
+		slug: v.string(),
+		durationMs: v.optional(v.number()),
+	},
+	handler: async (ctx, args) => {
+		const userId = await getAuthUserId(ctx);
+		if (!userId) {
+			throw new Error("Authentication required");
+		}
+		const game = await getGameBySlug(ctx.db, args.slug);
+		if (!game) {
+			throw new Error("Game not found");
+		}
+		const ownerId = game.createdBy ?? userId;
+		if (ownerId !== userId) {
+			throw new Error("Only the game owner can start the game");
+		}
+		const countdownDuration = args.durationMs ?? 5000;
+		const countdownEndsAt = Date.now() + countdownDuration;
+		await ctx.db.patch(game._id, {
+			status: "countdown",
+			createdBy: ownerId,
+			countdownEndsAt,
+		});
+		return { status: "countdown", countdownEndsAt };
+	},
+});
+
+export const completeGameStart = mutation({
 	args: {
 		slug: v.string(),
 	},
@@ -65,13 +99,23 @@ export const startGame = mutation({
 		if (!game) {
 			throw new Error("Game not found");
 		}
-		if (game.status === "completed") {
-			return { status: game.status, gameId: game._id };
+		if (game.status !== "countdown" || game.countdownEndsAt === undefined) {
+			return {
+				status: game.status,
+				countdownEndsAt: game.countdownEndsAt ?? null,
+			};
 		}
-		if (game.status !== "active") {
-			await ctx.db.patch(game._id, { status: "active" });
+		if (Date.now() < game.countdownEndsAt) {
+			return {
+				status: "countdown",
+				countdownEndsAt: game.countdownEndsAt,
+			};
 		}
-		return { status: "active", gameId: game._id };
+		await ctx.db.patch(game._id, {
+			status: "active",
+			countdownEndsAt: undefined,
+		});
+		return { status: "active", countdownEndsAt: null };
 	},
 });
 
@@ -143,7 +187,7 @@ export const activePresence = query({
 	handler: async (ctx, args) => {
 		const game = await getGameBySlug(ctx.db, args.slug);
 		if (!game) {
-			return { count: 0 };
+			return { count: 0, participants: [] };
 		}
 		const cutoff = Date.now() - PRESENCE_TTL;
 		const presences = await ctx.db
@@ -151,6 +195,13 @@ export const activePresence = query({
 			.withIndex("by_game", (q) => q.eq("gameId", game._id))
 			.collect();
 		const active = presences.filter((presence) => presence.updatedAt >= cutoff);
-		return { count: active.length };
+		return {
+			count: active.length,
+			participants: active.map((presence) => ({
+				clientId: presence.clientId,
+				userId: presence.userId ?? null,
+				lastSeen: presence.updatedAt,
+			})),
+		};
 	},
 });

@@ -11,7 +11,9 @@ export const gameTables = {
 			v.literal("lobby"),
 			v.literal("active"),
 			v.literal("completed"),
+			v.literal("countdown"),
 		),
+		countdownEndsAt: v.optional(v.number()),
 	})
 		.index("by_status", ["status"])
 		.index("by_slug", ["slug"])
