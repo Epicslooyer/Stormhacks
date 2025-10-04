@@ -21,22 +21,9 @@ export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
 		return nextjsMiddlewareRedirect(request, "/signin");
 	}
 	
-	// For authenticated users on protected routes, check email verification
+	// For authenticated users on protected routes, allow request to continue
 	if (isProtectedRoute(request) && isAuthenticated) {
-		try {
-			const user = await convexAuth.getUser();
-			if (user && !user.emailVerificationTime) {
-				// Allow access to verification page
-				if (request.nextUrl.pathname === "/verify-email") {
-					return;
-				}
-				// Redirect unverified users to verification page
-				return nextjsMiddlewareRedirect(request, "/verify-email");
-			}
-		} catch (error) {
-			console.error("Error checking user verification status:", error);
-			// If there's an error checking verification, allow access
-		}
+		return;
 	}
 });
 

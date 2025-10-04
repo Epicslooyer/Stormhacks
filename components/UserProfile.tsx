@@ -18,7 +18,7 @@ export default function UserProfile() {
 		setResendMessage(null);
 
 		try {
-			await resendVerification({ email: userStatus.email });
+		await resendVerification({});
 			setResendMessage("Verification email sent! Please check your inbox.");
 		} catch (error: any) {
 			setResendMessage(error.message || "Failed to resend verification email");

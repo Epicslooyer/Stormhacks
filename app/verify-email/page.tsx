@@ -60,7 +60,7 @@ export default function VerifyEmail() {
 		setError(null);
 
 		try {
-			await resendVerification({ email });
+		await resendVerification({});
 			setError(null);
 			alert("Verification email sent! Please check your inbox.");
 		} catch (error: any) {
