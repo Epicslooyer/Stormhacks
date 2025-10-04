@@ -16,9 +16,11 @@
 	"dependencies": {
 		"@convex-dev/auth": "^0.0.90",
 		"@openrouter/ai-sdk-provider": "^1.2.0",
+		"@tanstack/react-query": "^5.90.2",
 		"ai": "^5.0.60",
 		"convex": "^1.27.3",
 		"fuse.js": "^7.1.0",
+		"leetcode-query": "^2.0.1",
 		"next": "15.5.4",
 		"react": "^19.2.0",
 		"react-dom": "^19.2.0"
