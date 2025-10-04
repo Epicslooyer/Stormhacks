@@ -1,6 +1,14 @@
 import Fuse from "fuse.js";
 import data from "./problems.json";
 
+type Problem = {
+	id: number;
+	title: string;
+	slug: string;
+	difficulty: number;
+	frontend_id: number;
+};
+
 export const GET = (request: Request) => {
 	// Get the search query from the URL
 	const url = new URL(request.url);
@@ -14,7 +22,7 @@ export const GET = (request: Request) => {
 	}
 
 	// Filter out premium problems and map to searchable format
-	const problems = data.stat_status_pairs
+	const problems: Problem[] = data.stat_status_pairs
 		.filter((item) => !item.paid_only)
 		.map((item) => ({
 			id: item.stat.question_id,
@@ -25,7 +33,7 @@ export const GET = (request: Request) => {
 		}));
 
 	// Configure Fuse.js fuzzy search
-	const fuse = new Fuse(problems, {
+	const fuse = new Fuse<Problem>(problems, {
 		keys: ["title", "slug"],
 		includeScore: true,
 		threshold: 0.3,

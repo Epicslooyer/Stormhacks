@@ -1,9 +1,10 @@
 import LobbySession from "./session";
 
-export default function LobbySlugPage({
+export default async function LobbySlugPage({
 	params,
 }: {
-	params: { slug: string };
+	params: Promise<{ slug: string }>;
 }) {
-	return <LobbySession slug={params.slug} />;
+	const { slug } = await params;
+	return <LobbySession slug={slug} />;
 }
