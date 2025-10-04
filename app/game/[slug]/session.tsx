@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { useGameConnection } from "@/components/useGameConnection";
 
 export default function GameSession({ slug }: { slug: string }) {
 	const { game, clientId, presenceCount, slug: resolvedSlug } =
 		useGameConnection(slug, "/game");
+	const [copied, setCopied] = useState(false);
 
 	return (
 		<main className="p-8 flex flex-col gap-6 max-w-3xl mx-auto">
@@ -16,13 +18,30 @@ export default function GameSession({ slug }: { slug: string }) {
 					Status: {game?.status ?? "creating"}
 				</p>
 			</header>
-			<section className="flex flex-col items-center gap-2">
+			<section className="flex flex-col items-center gap-3">
 				<span className="text-lg font-semibold">
 					Live participants: {presenceCount}
 				</span>
 				<p className="text-xs text-slate-500 dark:text-slate-400">
 					You are connected as {clientId.slice(0, 8)}
 				</p>
+				<button
+					type="button"
+					className="bg-slate-200 dark:bg-slate-800 text-foreground px-3 py-1 rounded-md"
+					onClick={async () => {
+						if (typeof window === "undefined") return;
+						const shareUrl = `${window.location.origin}/game/${resolvedSlug}`;
+						try {
+							await navigator.clipboard.writeText(shareUrl);
+							setCopied(true);
+							setTimeout(() => setCopied(false), 2000);
+						} catch (error) {
+							console.error("Failed to copy game link", error);
+						}
+					}}
+				>
+					{copied ? "Copied!" : "Share game link"}
+				</button>
 			</section>
 		</main>
 	);

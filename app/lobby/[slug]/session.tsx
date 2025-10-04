@@ -13,6 +13,7 @@ export default function LobbySession({ slug }: { slug: string }) {
 		useGameConnection(slug, "/lobby");
 	const startGame = useMutation(api.games.startGame);
 	const [pending, setPending] = useState(false);
+	const [copied, setCopied] = useState(false);
 
 	const status = game?.status ?? "lobby";
 	const canStart = status !== "active" && status !== "completed";
@@ -36,6 +37,23 @@ export default function LobbySession({ slug }: { slug: string }) {
 				</p>
 			</section>
 			<section className="flex flex-col items-center gap-3">
+				<button
+					type="button"
+					className="bg-slate-200 dark:bg-slate-800 text-foreground px-3 py-1 rounded-md"
+					onClick={async () => {
+						if (typeof window === "undefined") return;
+						const shareUrl = `${window.location.origin}/lobby/${resolvedSlug}`;
+						try {
+							await navigator.clipboard.writeText(shareUrl);
+							setCopied(true);
+							setTimeout(() => setCopied(false), 2000);
+						} catch (error) {
+							console.error("Failed to copy lobby link", error);
+						}
+					}}
+				>
+					{copied ? "Copied!" : "Share lobby link"}
+				</button>
 				<button
 					type="button"
 					className="bg-foreground text-background px-4 py-2 rounded-md disabled:opacity-50"
