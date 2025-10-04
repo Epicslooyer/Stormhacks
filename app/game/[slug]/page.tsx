@@ -1,9 +1,10 @@
 import GameSession from "./session";
 
-export default function GameSlugPage({
+export default async function GameSlugPage({
 	params,
 }: {
-	params: { slug: string };
+	params: Promise<{ slug: string }> | { slug: string };
 }) {
-	return <GameSession slug={params.slug} />;
+	const resolvedParams = await params;
+	return <GameSession slug={resolvedParams.slug} />;
 }
