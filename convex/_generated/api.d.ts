@@ -19,6 +19,7 @@ import type * as emailProvider from "../emailProvider.js";
 import type * as games from "../games.js";
 import type * as http from "../http.js";
 import type * as myFunctions from "../myFunctions.js";
+import type * as round from "../round.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   games: typeof games;
   http: typeof http;
   myFunctions: typeof myFunctions;
+  round: typeof round;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

@@ -7,12 +7,12 @@ import type { Doc } from "./_generated/dataModel";
 
 export const updateRound = mutation({
     args: {
-
+        gameId: v.id("round"),
         slug: v.string(),
         newCode : v.string()
     },
-      handler: async (ctx, { slug, newCode }) => {
+      handler: async (ctx, { gameId, slug, newCode }) => {
 
-    await ctx.db.patch(userId, { code: newCode });
+    await ctx.db.patch(gameId, { code: newCode });
   }
 });
