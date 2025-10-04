@@ -15,16 +15,23 @@
 		"check": "biome check ./ --write --unsafe"
 	},
 	"dependencies": {
+		"@chakra-ui/react": "^3.27.0",
 		"@convex-dev/auth": "^0.0.90",
+		"@emotion/react": "^11.14.0",
+		"@emotion/styled": "^11.14.1",
+		"@monaco-editor/react": "^4.7.0",
 		"@openrouter/ai-sdk-provider": "^1.2.0",
 		"@tanstack/react-query": "^5.90.2",
 		"ai": "^5.0.60",
 		"convex": "^1.27.3",
+		"framer-motion": "^12.23.22",
 		"fuse.js": "^7.1.0",
 		"leetcode-query": "^2.0.1",
 		"next": "15.5.4",
+		"next-themes": "^0.4.6",
 		"react": "^19.2.0",
-		"react-dom": "^19.2.0"
+		"react-dom": "^19.2.0",
+		"react-icons": "^5.5.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.2.5",
