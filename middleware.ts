@@ -5,14 +5,38 @@ import {
 } from "@convex-dev/auth/nextjs/server";
 
 const isSignInPage = createRouteMatcher(["/signin"]);
-const isProtectedRoute = createRouteMatcher(["/", "/server"]);
+const isAuthPage = createRouteMatcher(["/signin", "/verify-email", "/reset-password"]);
+const isProtectedRoute = createRouteMatcher(["/", "/server", "/game", "/lobby", "/problems"]);
 
 export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
-	if (isSignInPage(request) && (await convexAuth.isAuthenticated())) {
+	const isAuthenticated = await convexAuth.isAuthenticated();
+	
+	// Redirect authenticated users away from auth pages
+	if (isAuthPage(request) && isAuthenticated) {
 		return nextjsMiddlewareRedirect(request, "/");
 	}
-	if (isProtectedRoute(request) && !(await convexAuth.isAuthenticated())) {
+	
+	// Redirect unauthenticated users to sign in
+	if (isProtectedRoute(request) && !isAuthenticated) {
 		return nextjsMiddlewareRedirect(request, "/signin");
+	}
+	
+	// For authenticated users on protected routes, check email verification
+	if (isProtectedRoute(request) && isAuthenticated) {
+		try {
+			const user = await convexAuth.getUser();
+			if (user && !user.emailVerificationTime) {
+				// Allow access to verification page
+				if (request.nextUrl.pathname === "/verify-email") {
+					return;
+				}
+				// Redirect unverified users to verification page
+				return nextjsMiddlewareRedirect(request, "/verify-email");
+			}
+		} catch (error) {
+			console.error("Error checking user verification status:", error);
+			// If there's an error checking verification, allow access
+		}
 	}
 });
 
