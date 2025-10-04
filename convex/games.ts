@@ -17,6 +17,9 @@ export const getOrCreateGame = mutation({
 	args: {
 		slug: v.string(),
 		name: v.optional(v.string()),
+		problemSlug: v.optional(v.string()),
+		problemTitle: v.optional(v.string()),
+		problemDifficulty: v.optional(v.string()),
 	},
 	handler: async (ctx, args) => {
 		const existing = await getGameBySlug(ctx.db, args.slug);
@@ -32,6 +35,9 @@ export const getOrCreateGame = mutation({
 			createdBy: userId ?? undefined,
 			createdAt: now,
 			status: "lobby",
+			problemSlug: args.problemSlug ?? undefined,
+			problemTitle: args.problemTitle ?? undefined,
+			problemDifficulty: args.problemDifficulty ?? undefined,
 		});
 
 		return { gameId, slug: args.slug, created: true };
@@ -56,6 +62,9 @@ export const getGame = query({
 			createdAt: game.createdAt,
 			createdBy: game.createdBy,
 			countdownEndsAt: game.countdownEndsAt ?? null,
+			problemSlug: game.problemSlug ?? null,
+			problemTitle: game.problemTitle ?? null,
+			problemDifficulty: game.problemDifficulty ?? null,
 			viewerId,
 		};
 	},

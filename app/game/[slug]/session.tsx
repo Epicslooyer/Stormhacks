@@ -8,6 +8,8 @@ export default function GameSession({ slug }: { slug: string }) {
 		useGameConnection(slug, "/game");
 	const [copied, setCopied] = useState(false);
 	const countdownSeconds = countdownMs === null ? null : Math.ceil(countdownMs / 1000);
+	const problemTitle = game?.problemTitle ?? game?.name ?? resolvedSlug;
+	const problemDifficulty = game?.problemDifficulty ?? null;
 
 	return (
 		<main className="p-8 flex flex-col gap-6 max-w-3xl mx-auto">
@@ -17,6 +19,10 @@ export default function GameSession({ slug }: { slug: string }) {
 				</h1>
 				<p className="text-sm text-slate-600 dark:text-slate-400">
 					Status: {game?.status ?? "creating"}
+				</p>
+				<p className="text-sm text-slate-500 dark:text-slate-400">
+					Problem: {problemTitle}
+					{problemDifficulty ? ` · ${problemDifficulty}` : ""}
 				</p>
 			</header>
 			<section className="flex flex-col items-center gap-3">

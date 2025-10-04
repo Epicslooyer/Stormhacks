@@ -28,6 +28,8 @@ export default function LobbySession({ slug }: { slug: string }) {
 		game?.createdBy !== undefined && viewerId !== null && game.createdBy === viewerId;
 	const canStart = status === "lobby" && isOwner;
 	const countdownActive = status === "countdown" && countdownSeconds !== null;
+	const problemTitle = game?.problemTitle ?? game?.name ?? resolvedSlug;
+	const problemDifficulty = game?.problemDifficulty ?? null;
 	const visibleParticipants = useMemo(() => {
 		return participants.map((presence) => {
 			const isGuest = presence.userId === null;
@@ -57,6 +59,10 @@ export default function LobbySession({ slug }: { slug: string }) {
 				<p className="text-sm text-slate-600 dark:text-slate-400">
 					Status: {status}
 				</p>
+				<p className="text-sm text-slate-500 dark:text-slate-400">
+					Problem: {problemTitle}
+					{problemDifficulty ? ` · ${problemDifficulty}` : ""}
+				</p>
 			</header>
 			<section className="flex flex-col items-center gap-2">
 				<span className="text-lg font-semibold">
@@ -65,11 +71,11 @@ export default function LobbySession({ slug }: { slug: string }) {
 				<p className="text-xs text-slate-500 dark:text-slate-400">
 					You are connected as {clientId.slice(0, 8)}
 				</p>
-		{countdownActive && countdownSeconds !== null && (
-			<p className="text-sm font-semibold text-foreground">
-				Game starting in {countdownSeconds}s
-			</p>
-		)}
+				{countdownActive && countdownSeconds !== null && (
+					<p className="text-sm font-semibold text-foreground">
+						Game starting in {countdownSeconds}s
+					</p>
+				)}
 			</section>
 			<section className="flex flex-col items-center gap-3">
 				<div className="w-full max-w-md border border-slate-200 dark:border-slate-800 rounded-md p-3">

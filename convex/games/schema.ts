@@ -14,6 +14,9 @@ export const gameTables = {
 			v.literal("countdown"),
 		),
 		countdownEndsAt: v.optional(v.number()),
+	problemSlug: v.optional(v.string()),
+	problemTitle: v.optional(v.string()),
+	problemDifficulty: v.optional(v.string()),
 	})
 		.index("by_status", ["status"])
 		.index("by_slug", ["slug"])
