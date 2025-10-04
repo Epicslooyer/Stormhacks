@@ -5,6 +5,7 @@ import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "../convex/_generated/api";
+import UserProfile from "../components/UserProfile";
 
 export default function Home() {
 	return (
@@ -63,6 +64,9 @@ function Content() {
 	return (
 		<div className="flex flex-col gap-8 max-w-lg mx-auto">
 			<p>Welcome {viewer ?? "Anonymous"}!</p>
+			
+			<UserProfile />
+			
 			<p>
 				Click the button below and open this page in another window - this data
 				is persisted in the Convex cloud database!
