@@ -9,7 +9,8 @@
     "predev": "convex dev --until-success && convex dev --once --run-sh \"node setup.mjs --once\" && convex dashboard",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "biome lint ./src",
+    "format": "biome format ./src --write"
   },
   "dependencies": {
     "@convex-dev/auth": "^0.0.90",
@@ -19,16 +20,13 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
+    "@biomejs/biome": "2.2.5",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^16.4.7",
-    "eslint": "^9",
-    "eslint-config-next": "15.2.3",
     "npm-run-all": "^4.1.5",
-    "prettier": "^3.5.3",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
