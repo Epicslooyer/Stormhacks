@@ -1,9 +1,9 @@
 "use client";
 
 import { useAuthActions } from "@convex-dev/auth/react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import Link from "next/link";
 
 export default function SignIn() {
 	const { signIn } = useAuthActions();
@@ -20,27 +20,29 @@ export default function SignIn() {
 		try {
 			const formData = new FormData(e.target as HTMLFormElement);
 			formData.set("flow", flow);
-			
+
 			await signIn("password", formData);
 			router.push("/");
-		} catch (error: any) {
+		} catch (error: unknown) {
 			console.error("Sign in error:", error);
-			
+			const message = error instanceof Error ? error.message : "";
+
 			// Handle specific error cases
-			if (error.message?.includes("email not verified")) {
-				setError("Please verify your email address before signing in. Check your inbox for a verification email.");
-			} else if (error.message?.includes("invalid credentials")) {
+			if (message.includes("email not verified")) {
+				setError(
+					"Please verify your email address before signing in. Check your inbox for a verification email.",
+				);
+			} else if (message.includes("invalid credentials")) {
 				setError("Invalid email or password. Please try again.");
-			} else if (error.message?.includes("user not found")) {
+			} else if (message.includes("user not found")) {
 				setError("No account found with this email address.");
 			} else {
-				setError(error.message || "An error occurred. Please try again.");
+				setError(message || "An error occurred. Please try again.");
 			}
 		} finally {
 			setIsLoading(false);
 		}
 	};
-
 
 	return (
 		<div className="flex flex-col gap-8 w-96 mx-auto h-screen justify-center items-center">
@@ -49,13 +51,12 @@ export default function SignIn() {
 					{flow === "signIn" ? "Welcome Back" : "Create Account"}
 				</h1>
 				<p className="text-gray-600 dark:text-gray-400">
-					{flow === "signIn" 
-						? "Sign in to access your account" 
+					{flow === "signIn"
+						? "Sign in to access your account"
 						: "Sign up to get started"}
 				</p>
 			</div>
-			
-			
+
 			<form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full">
 				<div className="flex flex-col gap-2">
 					<input
@@ -79,7 +80,7 @@ export default function SignIn() {
 
 				{flow === "signIn" && (
 					<div className="text-right">
-						<Link 
+						<Link
 							href="/reset-password"
 							className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
 						>
@@ -93,7 +94,7 @@ export default function SignIn() {
 					type="submit"
 					disabled={isLoading}
 				>
-					{isLoading ? "Loading..." : (flow === "signIn" ? "Sign In" : "Sign Up")}
+					{isLoading ? "Loading..." : flow === "signIn" ? "Sign In" : "Sign Up"}
 				</button>
 
 				<div className="text-center">
@@ -117,16 +118,15 @@ export default function SignIn() {
 
 				{error && (
 					<div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
-						<p className="text-red-700 dark:text-red-300 text-sm">
-							{error}
-						</p>
+						<p className="text-red-700 dark:text-red-300 text-sm">{error}</p>
 					</div>
 				)}
 			</form>
 
 			{flow === "signUp" && (
 				<div className="text-center text-xs text-gray-500 dark:text-gray-400 max-w-sm">
-					By signing up, you agree to receive a verification email to confirm your account.
+					By signing up, you agree to receive a verification email to confirm
+					your account.
 				</div>
 			)}
 		</div>

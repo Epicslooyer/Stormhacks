@@ -1,12 +1,15 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
-import type { DatabaseReader } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
+import type { DatabaseReader } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 
 const PRESENCE_TTL = 1000 * 15;
 
-async function getGameBySlug(db: DatabaseReader, slug: string): Promise<Doc<"games"> | null> {
+async function getGameBySlug(
+	db: DatabaseReader,
+	slug: string,
+): Promise<Doc<"games"> | null> {
 	return db
 		.query("games")
 		.withIndex("by_slug", (q) => q.eq("slug", slug))

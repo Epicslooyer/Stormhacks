@@ -4,10 +4,16 @@ import { useState } from "react";
 import { useGameConnection } from "@/components/useGameConnection";
 
 export default function GameSession({ slug }: { slug: string }) {
-	const { game, clientId, presenceCount, slug: resolvedSlug, countdownMs } =
-		useGameConnection(slug, "/game");
+	const {
+		game,
+		clientId,
+		presenceCount,
+		slug: resolvedSlug,
+		countdownMs,
+	} = useGameConnection(slug, "/game");
 	const [copied, setCopied] = useState(false);
-	const countdownSeconds = countdownMs === null ? null : Math.ceil(countdownMs / 1000);
+	const countdownSeconds =
+		countdownMs === null ? null : Math.ceil(countdownMs / 1000);
 	const problemTitle = game?.problemTitle ?? game?.name ?? resolvedSlug;
 	const problemDifficulty = game?.problemDifficulty ?? null;
 
@@ -32,16 +38,16 @@ export default function GameSession({ slug }: { slug: string }) {
 				<p className="text-xs text-slate-500 dark:text-slate-400">
 					You are connected as {clientId.slice(0, 8)}
 				</p>
-		{game?.status === "countdown" && countdownSeconds !== null && (
-			<p className="text-sm font-semibold text-foreground">
-				Game starting in {countdownSeconds}s
-			</p>
-		)}
-		{game?.status === "lobby" && (
-			<p className="text-xs text-slate-500 dark:text-slate-400">
-				Waiting for the host to begin the game…
-			</p>
-		)}
+				{game?.status === "countdown" && countdownSeconds !== null && (
+					<p className="text-sm font-semibold text-foreground">
+						Game starting in {countdownSeconds}s
+					</p>
+				)}
+				{game?.status === "lobby" && (
+					<p className="text-xs text-slate-500 dark:text-slate-400">
+						Waiting for the host to begin the game…
+					</p>
+				)}
 				<button
 					type="button"
 					className="bg-slate-200 dark:bg-slate-800 text-foreground px-3 py-1 rounded-md"

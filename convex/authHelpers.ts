@@ -1,6 +1,6 @@
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { emailProvider } from "./emailProvider";
 
 // Request email verification for a user
@@ -23,7 +23,7 @@ export const requestEmailVerification = mutation({
 
 		// Generate verification token
 		const token = await emailProvider.generateVerificationToken();
-		
+
 		// Store verification token with expiration (24 hours)
 		const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
 		await ctx.db.insert("emailVerificationTokens", {
@@ -41,7 +41,7 @@ export const requestEmailVerification = mutation({
 
 // Verify email with token
 export const verifyEmail = mutation({
-	args: { 
+	args: {
 		email: v.string(),
 		token: v.string(),
 	},
@@ -102,7 +102,7 @@ export const requestPasswordReset = mutation({
 
 		// Generate reset token
 		const token = await emailProvider.generatePasswordResetToken();
-		
+
 		// Store reset token with expiration (1 hour)
 		const expiresAt = Date.now() + 60 * 60 * 1000; // 1 hour
 		await ctx.db.insert("passwordResetTokens", {
@@ -164,7 +164,7 @@ export const resendVerificationEmail = mutation({
 
 		// Generate new verification token
 		const token = await emailProvider.generateVerificationToken();
-		
+
 		// Store verification token with expiration (24 hours)
 		const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
 		await ctx.db.insert("emailVerificationTokens", {
@@ -201,10 +201,11 @@ export const validatePasswordResetToken = mutation({
 		// Delete the used token
 		await ctx.db.delete(resetToken._id);
 
-		return { 
-			success: true, 
+		return {
+			success: true,
 			email: resetToken.email,
-			message: "Token is valid. Please contact support to reset your password, or use the sign-in page to reset it through the standard flow."
+			message:
+				"Token is valid. Please contact support to reset your password, or use the sign-in page to reset it through the standard flow.",
 		};
 	},
 });

@@ -7,7 +7,8 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"includes": ["**"]
+		"includes": ["**"],
+		"maxSize": 2500000
 	},
 	"formatter": {
 		"enabled": true,

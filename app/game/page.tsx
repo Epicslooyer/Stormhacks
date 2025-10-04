@@ -13,12 +13,15 @@ export default function GameHomePage() {
 				<CreateGameButton redirectBase="/lobby" label="Create new lobby" />
 			</div>
 			<p className="text-center text-sm">
-				Already have a game running? Visit {" "}
+				Already have a game running? Visit{" "}
 				<Link href="/lobby" className="underline hover:no-underline">
 					/lobby
 				</Link>{" "}
-				to manage waiting rooms or head directly to {" "}
-				<Link href="/game/your-game-id" className="underline hover:no-underline">
+				to manage waiting rooms or head directly to{" "}
+				<Link
+					href="/game/your-game-id"
+					className="underline hover:no-underline"
+				>
 					/game/your-game-id
 				</Link>
 				.

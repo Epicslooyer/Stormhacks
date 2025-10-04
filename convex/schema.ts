@@ -20,12 +20,14 @@ export default defineSchema({
 		email: v.string(),
 		token: v.string(),
 		expiresAt: v.number(),
-	}).index("by_token", ["token"])
+	})
+		.index("by_token", ["token"])
 		.index("by_email", ["email"]),
 	passwordResetTokens: defineTable({
 		email: v.string(),
 		token: v.string(),
 		expiresAt: v.number(),
-	}).index("by_token", ["token"])
+	})
+		.index("by_token", ["token"])
 		.index("by_email", ["email"]),
 });

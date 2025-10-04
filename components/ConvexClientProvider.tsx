@@ -18,7 +18,6 @@ export default function ConvexClientProvider({
 	children,
 }: {
 	children: ReactNode;
-
 }) {
 	const [queryClient] = useState(
 		() =>

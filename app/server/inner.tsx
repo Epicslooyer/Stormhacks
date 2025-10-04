@@ -19,6 +19,7 @@ export default function Home({
 				</code>
 			</div>
 			<button
+				type="button"
 				className="bg-foreground text-background px-4 py-2 rounded-md mx-auto"
 				onClick={() => {
 					void addNumber({ value: Math.floor(Math.random() * 10) });
