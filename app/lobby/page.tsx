@@ -91,7 +91,7 @@ export default function LobbyPage() {
 									</div>
 									<h3 className="font-semibold">Get Ready</h3>
 									<p className="text-sm text-muted-foreground">
-										Both players must click "Ready Up" before the game can start
+										All players must click "Ready Up" before the game can start
 									</p>
 								</div>
 								<div className="space-y-2">
@@ -100,7 +100,7 @@ export default function LobbyPage() {
 									</div>
 									<h3 className="font-semibold">Start Coding</h3>
 									<p className="text-sm text-muted-foreground">
-										Once both players are ready, the host can start the game
+										Once all players are ready, the host can start the game
 									</p>
 								</div>
 							</div>
