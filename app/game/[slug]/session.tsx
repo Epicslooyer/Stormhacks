@@ -34,6 +34,17 @@ type TopicTag = {
 	slug?: string | null;
 };
 
+const REMOTE_CURSOR_STYLES = [
+	{ suffix: "0", border: "#ef4444", background: "rgba(239, 68, 68, 0.25)" },
+	{ suffix: "1", border: "#22c55e", background: "rgba(34, 197, 94, 0.25)" },
+	{ suffix: "2", border: "#3b82f6", background: "rgba(59, 130, 246, 0.25)" },
+	{ suffix: "3", border: "#f59e0b", background: "rgba(245, 158, 11, 0.25)" },
+	{ suffix: "4", border: "#a855f7", background: "rgba(168, 85, 247, 0.25)" },
+	{ suffix: "5", border: "#ec4899", background: "rgba(236, 72, 153, 0.25)" },
+] as const;
+
+const REMOTE_CURSOR_STYLE_ELEMENT_ID = "remote-cursor-styles";
+
 export default function GameSession({ slug }: { slug: string }) {
 	const {
 		game,
@@ -41,6 +52,9 @@ export default function GameSession({ slug }: { slug: string }) {
 		presenceCount,
 		slug: resolvedSlug,
 		countdownMs,
+		participants,
+		cursorPositions,
+		codeSnapshots,
 	} = useGameConnection(slug, "/game");
 	const [copied, setCopied] = useState(false);
 	const countdownSeconds =
@@ -63,6 +77,7 @@ export default function GameSession({ slug }: { slug: string }) {
 	const userEditedRef = useRef(false);
 	const languageSelectId = useId();
 	const updateCursorPosition = useMutation(api.games.updateCursorPosition);
+	const updateCodeState = useMutation(api.games.updateCodeState);
 	const submitScore = useMutation(api.games.submitScore);
 	const scores = useQuery(api.games.getScoresForGame, { slug: resolvedSlug });
 	const editorRef = useRef<MonacoEditorNS.IStandaloneCodeEditor | null>(null);
@@ -75,6 +90,11 @@ export default function GameSession({ slug }: { slug: string }) {
 		column: number;
 	} | null>(null);
 	const lastSentCursorAtRef = useRef(0);
+	const remoteCursorDecorationsRef = useRef<string[]>([]);
+	const lastPublishedRef = useRef<{ code: string; language: string | null }>({
+		code: "",
+		language: null,
+	});
 
 	const handleEditorMount = useCallback(
 		(editorInstance: MonacoEditorNS.IStandaloneCodeEditor) => {
@@ -98,6 +118,31 @@ export default function GameSession({ slug }: { slug: string }) {
 		},
 		[],
 	);
+
+	useEffect(() => {
+		if (typeof document === "undefined") {
+			return;
+		}
+		if (document.getElementById(REMOTE_CURSOR_STYLE_ELEMENT_ID)) {
+			return;
+		}
+		const style = document.createElement("style");
+		style.id = REMOTE_CURSOR_STYLE_ELEMENT_ID;
+		style.textContent = REMOTE_CURSOR_STYLES.map(({
+			suffix,
+			border,
+			background,
+		}) =>
+			`.monaco-editor .remote-cursor-color-${suffix} {
+				background-color: ${background};
+			}
+		.monaco-editor .remote-cursor-line-${suffix} {
+				border-left: 2px solid ${border};
+			}
+		`
+		).join("\n");
+		document.head.appendChild(style);
+	}, []);
 
 	useEffect(() => {
 		return () => {
@@ -173,6 +218,33 @@ export default function GameSession({ slug }: { slug: string }) {
 		});
 	}, [problem]);
 
+	const participantLookup = useMemo(() => {
+		const map = new Map<string, (typeof participants)[number]>();
+		for (const participant of participants) {
+			map.set(participant.clientId, participant);
+		}
+		return map;
+	}, [participants]);
+
+	const remoteCursorEntries = useMemo(() => {
+		return cursorPositions
+			.filter((cursor) => cursor.clientId !== clientId)
+			.map((cursor) => {
+				const participant = participantLookup.get(cursor.clientId);
+				const labelSource = participant?.userId
+					? String(participant.userId).slice(0, 8)
+					: cursor.clientId.slice(0, 8);
+				return {
+					...cursor,
+					label: labelSource,
+				};
+			});
+	}, [cursorPositions, clientId, participantLookup]);
+
+	const myCodeSnapshot = useMemo(() => {
+		return codeSnapshots.find((snapshot) => snapshot.clientId === clientId) ?? null;
+	}, [codeSnapshots, clientId]);
+
 	useEffect(() => {
 		if (codeSnippets.length === 0) {
 			setSelectedLanguage(null);
@@ -198,6 +270,123 @@ export default function GameSession({ slug }: { slug: string }) {
 			setCode(snippet.code);
 		}
 	}, [codeSnippets, selectedLanguage]);
+
+	useEffect(() => {
+		if (!myCodeSnapshot) {
+			return;
+		}
+		const snapshotLanguage = myCodeSnapshot.language ?? null;
+		if (userEditedRef.current) {
+			return;
+		}
+		userEditedRef.current = false;
+		setCode(myCodeSnapshot.code);
+		if (!selectedLanguage && snapshotLanguage) {
+			setSelectedLanguage(snapshotLanguage);
+		}
+		lastPublishedRef.current = {
+			code: myCodeSnapshot.code,
+			language: snapshotLanguage,
+		};
+	}, [myCodeSnapshot, selectedLanguage]);
+
+	useEffect(() => {
+		if (!resolvedSlug || !clientId) {
+			return;
+		}
+		const normalizedLanguage = selectedLanguage ?? null;
+		if (!userEditedRef.current) {
+			if (
+				myCodeSnapshot &&
+				myCodeSnapshot.code === code &&
+				(myCodeSnapshot.language ?? null) === normalizedLanguage
+			) {
+				return;
+			}
+		}
+		if (
+			lastPublishedRef.current.code === code &&
+			lastPublishedRef.current.language === normalizedLanguage
+		) {
+			return;
+		}
+		const timeout = setTimeout(() => {
+			lastPublishedRef.current = { code, language: normalizedLanguage };
+		void updateCodeState({
+			slug: resolvedSlug,
+			clientId,
+			code,
+			language: normalizedLanguage ?? undefined,
+		})
+			.then(() => {
+				userEditedRef.current = false;
+			})
+			.catch((error) => {
+				console.error("Failed to publish code state", error);
+				lastPublishedRef.current = { code: "", language: null };
+			});
+		}, 600);
+		return () => clearTimeout(timeout);
+	}, [code, selectedLanguage, resolvedSlug, clientId, updateCodeState, myCodeSnapshot]);
+
+	useEffect(() => {
+		const editorInstance = editorRef.current;
+		if (!editorInstance) {
+			return;
+		}
+		const monacoGlobal = (window as typeof window & {
+			monaco?: typeof import("monaco-editor");
+		}).monaco;
+		if (!monacoGlobal) {
+			return;
+		}
+		const model = editorInstance.getModel();
+		if (!model) {
+			return;
+		}
+		if (remoteCursorEntries.length === 0) {
+			remoteCursorDecorationsRef.current = editorInstance.deltaDecorations(
+				remoteCursorDecorationsRef.current,
+				[],
+			);
+			return;
+		}
+		const trackedRangeStickiness = monacoGlobal.editor?.TrackedRangeStickiness
+			?.NeverGrowsWhenTypingAtEdges;
+		const newDecorations = remoteCursorEntries.map((cursor, index) => {
+			const colorTheme = REMOTE_CURSOR_STYLES[index % REMOTE_CURSOR_STYLES.length];
+			const lineMaxColumn = model.getLineMaxColumn(cursor.lineNumber);
+			const startColumn = Math.max(1, Math.min(cursor.column, lineMaxColumn));
+			return {
+			range: new monacoGlobal.Range(
+				cursor.lineNumber,
+				startColumn,
+				cursor.lineNumber,
+				startColumn,
+			),
+			options: {
+				inlineClassName: `remote-cursor-color-${colorTheme.suffix}`,
+				linesDecorationsClassName: `remote-cursor-line-${colorTheme.suffix}`,
+				hoverMessage: [
+					{
+						value: `Player ${cursor.label}\\n(line ${cursor.lineNumber}, col ${cursor.column})`,
+					},
+				],
+				stickiness: trackedRangeStickiness,
+			},
+		};
+		});
+		remoteCursorDecorationsRef.current = editorInstance.deltaDecorations(
+			remoteCursorDecorationsRef.current,
+			newDecorations,
+		);
+		return () => {
+			remoteCursorDecorationsRef.current = editorInstance.deltaDecorations(
+				remoteCursorDecorationsRef.current,
+				[],
+			);
+		};
+	}, [remoteCursorEntries]);
 
 	const handleEditorChange = (value?: string) => {
 		userEditedRef.current = true;
@@ -233,7 +422,7 @@ export default function GameSession({ slug }: { slug: string }) {
 					language: selectedLanguage || "python",
 					testCases: testCases.testCases,
 					problemTitle: problem?.title,
-					problemDescription: problem?.content,
+					problemDescription: problem?.content ?? undefined,
 				}),
 			});
 

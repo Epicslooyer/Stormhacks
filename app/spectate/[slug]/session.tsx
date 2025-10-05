@@ -2,7 +2,7 @@
 
 import { useQuery } from "convex/react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api } from "@/convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,19 +31,26 @@ type VisibleParticipant = {
 };
 
 type SpectatorView = VisibleParticipant & {
-	placeholderCode: string;
+	code: string;
+	language: string | null;
 	cursorLabel: string;
+	cursorLine: number | null;
+	cursorColumn: number | null;
 	isEliminated: boolean;
+	lastCodeUpdated: number | null;
 };
 
 export default function SpectateSession({ slug }: { slug: string }) {
 	const game = useQuery(api.games.getGame, { slug });
 	const presence = useQuery(api.games.activePresence, { slug });
+	const cursorPositions = useQuery(api.games.activeCursorPositions, { slug });
+	const codeSnapshots = useQuery(api.games.activeCodeSnapshots, { slug });
 	const scores = useQuery(api.games.getScoresForGame, { slug });
 	const [countdownMs, setCountdownMs] = useState<number | null>(null);
-	const [selectedView, setSelectedView] = useState<SpectatorView | null>(null);
+	const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 	const [viewerOpen, setViewerOpen] = useState(false);
 	const [fullscreenOpen, setFullscreenOpen] = useState(false);
+	const [participantOrder, setParticipantOrder] = useState<string[]>([]);
 
 	const status = game?.status ?? null;
 	const presenceCount = presence?.count ?? 0;
@@ -85,6 +92,80 @@ export default function SpectateSession({ slug }: { slug: string }) {
 		});
 	}, [participants]);
 
+	useEffect(() => {
+		setParticipantOrder((previous) => {
+			const activeClientIds = new Set(
+				visibleParticipants.map((participant) => participant.clientId),
+			);
+			const filtered = previous.filter((clientId) => activeClientIds.has(clientId));
+			const additions = visibleParticipants
+				.map((participant) => participant.clientId)
+				.filter((clientId) => !filtered.includes(clientId));
+			return [...filtered, ...additions];
+		});
+	}, [visibleParticipants]);
+
+	const orderedParticipants = useMemo(() => {
+		const orderLookup = new Map(
+			participantOrder.map((clientId, index) => [clientId, index] as const),
+		);
+		return [...visibleParticipants].sort((a, b) => {
+			const orderA = orderLookup.get(a.clientId);
+			const orderB = orderLookup.get(b.clientId);
+			if (orderA === undefined && orderB === undefined) {
+				return a.clientId.localeCompare(b.clientId);
+			}
+			if (orderA === undefined) return 1;
+			if (orderB === undefined) return -1;
+			return orderA - orderB;
+		});
+	}, [participantOrder, visibleParticipants]);
+
+	const cursorMap = useMemo(() => {
+		const map = new Map<string, {
+			clientId: string;
+			lineNumber: number;
+			column: number;
+			lastUpdated: number;
+			userId: string | null;
+		}>();
+		if (!cursorPositions) {
+			return map;
+		}
+		for (const cursor of cursorPositions) {
+			map.set(cursor.clientId, {
+				clientId: cursor.clientId,
+				lineNumber: cursor.lineNumber,
+				column: cursor.column,
+				lastUpdated: cursor.lastUpdated,
+				userId: cursor.userId ?? null,
+			});
+		}
+		return map;
+	}, [cursorPositions]);
+
+	const codeSnapshotMap = useMemo(() => {
+		const map = new Map<
+			string,
+			{
+				code: string;
+				language: string | null;
+				lastUpdated: number;
+			}
+		>();
+		if (!codeSnapshots) {
+			return map;
+		}
+		for (const snapshot of codeSnapshots) {
+			map.set(snapshot.clientId, {
+				code: snapshot.code,
+				language: snapshot.language ?? null,
+				lastUpdated: snapshot.lastUpdated,
+			});
+		}
+		return map;
+	}, [codeSnapshots]);
+
 	const eliminatedParticipants = useMemo<VisibleParticipant[]>(() => {
 		if (!scores || scores.length === 0) return [];
 		
@@ -102,16 +183,88 @@ export default function SpectateSession({ slug }: { slug: string }) {
 	}, [eliminatedParticipants]);
 
 	const spectatorViews = useMemo<SpectatorView[]>(() => {
-		return visibleParticipants.map((participant) => {
-			const placeholderCode = `// ${participant.label}\n// Live code streaming will appear here.\n\nfunction solution() {\n\t// Implementation coming soon...\n}`;
+		return orderedParticipants.map((participant) => {
+			const snapshot = codeSnapshotMap.get(participant.clientId);
+			const cursor = cursorMap.get(participant.clientId);
+			const code = snapshot?.code ?? `// ${participant.label}\n// Waiting for live code…`;
+			const language = snapshot?.language ?? null;
+			const lastCodeUpdated = snapshot?.lastUpdated ?? null;
+			const cursorLabel = cursor
+				? `Cursor @ line ${cursor.lineNumber}, col ${cursor.column}`
+				: "Cursor: unavailable";
+			const cursorLine = cursor?.lineNumber ?? null;
+			const cursorColumn = cursor?.column ?? null;
 			return {
 				...participant,
-				placeholderCode,
-				cursorLabel: "Cursor: unavailable",
+				code,
+				language,
+				cursorLabel,
+				cursorLine,
+				cursorColumn,
 				isEliminated: eliminatedSet.has(participant.key),
+				lastCodeUpdated,
 			};
 		});
-	}, [eliminatedSet, visibleParticipants]);
+	}, [cursorMap, eliminatedSet, codeSnapshotMap, orderedParticipants]);
+
+	const selectedView = useMemo(() => {
+		if (!selectedClientId) {
+			return null;
+		}
+		return (
+			spectatorViews.find((view) => view.clientId === selectedClientId) ?? null
+		);
+	}, [selectedClientId, spectatorViews]);
+
+	const renderCodeContent = (
+		view: SpectatorView,
+		includeLanguageHeader = false,
+	) => {
+		const nodes: ReactNode[] = [];
+		if (includeLanguageHeader && view.language) {
+			nodes.push(
+				<Fragment key="language-header">{`// ${view.language}\n`}</Fragment>,
+			);
+		}
+
+		const lines = view.code.split("\n");
+		const cursorLineIndex =
+			view.cursorLine !== null
+				? Math.max(
+					0,
+					Math.min(view.cursorLine - 1, Math.max(lines.length - 1, 0)),
+				 )
+				: null;
+		const cursorColumnIndex =
+			view.cursorColumn !== null ? Math.max(0, view.cursorColumn - 1) : null;
+		const hasCursor =
+			cursorLineIndex !== null && cursorColumnIndex !== null && lines.length > 0;
+
+		lines.forEach((line, index) => {
+			if (hasCursor && cursorLineIndex === index) {
+				const column = Math.min(cursorColumnIndex, line.length);
+				const before = line.slice(0, column);
+				const after = line.slice(column);
+				nodes.push(
+					<Fragment key={`line-${index}`}>
+						{before}
+						<span className="text-red-500">▋</span>
+						{after === "" ? " " : after}
+						{index < lines.length - 1 ? "\n" : ""}
+					</Fragment>,
+				);
+			} else {
+				nodes.push(
+					<Fragment key={`line-${index}`}>
+						{line}
+						{index < lines.length - 1 ? "\n" : ""}
+					</Fragment>,
+				);
+			}
+		});
+
+		return nodes;
+	};
 
 	const countdownActive = status === "countdown" && countdownSeconds !== null;
 	const statusLabelMap: Record<string, string> = {
@@ -255,7 +408,7 @@ export default function SpectateSession({ slug }: { slug: string }) {
 										type="button"
 										key={participant.key}
 										onClick={() => {
-											setSelectedView(participant);
+							setSelectedClientId(participant.clientId);
 											setViewerOpen(true);
 										}}
 										className="relative flex flex-col justify-between overflow-hidden rounded-lg border border-border bg-card/80 p-4 text-left shadow-sm transition hover:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2"
@@ -273,14 +426,18 @@ export default function SpectateSession({ slug }: { slug: string }) {
 												{participant.clientId.slice(0, 6)}
 											</Badge>
 										</div>
-										<pre className="mt-4 max-h-44 overflow-auto rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-											<code>{participant.placeholderCode}</code>
+					<pre className="mt-4 max-h-44 overflow-auto rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+						<code>
+							{renderCodeContent(participant, true)}
+						</code>
 										</pre>
 										<div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
 											<span>{participant.cursorLabel}</span>
-											<span>
-												Last seen: {new Date(participant.lastSeen).toLocaleTimeString()}
-											</span>
+						<span>
+							{participant.lastCodeUpdated
+								? `Code ${new Date(participant.lastCodeUpdated).toLocaleTimeString()}`
+								: `Last seen ${new Date(participant.lastSeen).toLocaleTimeString()}`}
+						</span>
 										</div>
 										{participant.isEliminated && (
 											<span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-red-500/10">
@@ -306,13 +463,13 @@ export default function SpectateSession({ slug }: { slug: string }) {
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-3">
-							{visibleParticipants.length === 0 ? (
+					{orderedParticipants.length === 0 ? (
 								<div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/40 p-6 text-center text-sm text-muted-foreground">
 									No active players detected right now.
 								</div>
 							) : (
 								<div className="space-y-3">
-									{visibleParticipants.map((player, index) => (
+							{orderedParticipants.map((player, index) => (
 										<div
 											key={player.key}
 											className="flex items-center justify-between rounded-lg border border-border bg-card/80 p-3"
@@ -449,13 +606,13 @@ export default function SpectateSession({ slug }: { slug: string }) {
 			<Dialog
 				open={viewerOpen}
 				onOpenChange={(open) => {
-					setViewerOpen(open);
-					if (!open) {
-						setSelectedView(null);
-					}
+		setViewerOpen(open);
+		if (!open) {
+			setSelectedClientId(null);
+		}
 				}}
 			>
-				<DialogContent className="relative sm:max-w-4xl">
+		<DialogContent className="sm:max-w-4xl">
 					<DialogHeader>
 						<DialogTitle>
 							{selectedView?.label ?? "Participant"}
@@ -472,12 +629,16 @@ export default function SpectateSession({ slug }: { slug: string }) {
 								</Badge>
 								<span>{selectedView.isGuest ? "Guest player" : "Registered player"}</span>
 								<span>{selectedView.cursorLabel}</span>
-								<span>
-									Last seen at {new Date(selectedView.lastSeen).toLocaleTimeString()}
-								</span>
+					<span>
+						{selectedView.lastCodeUpdated
+							? `Code updated ${new Date(selectedView.lastCodeUpdated).toLocaleTimeString()}`
+							: `Last seen ${new Date(selectedView.lastSeen).toLocaleTimeString()}`}
+					</span>
 							</div>
-							<pre className="max-h-[60vh] overflow-auto rounded-md bg-muted px-4 py-3 text-sm leading-relaxed text-foreground">
-								<code>{selectedView.placeholderCode}</code>
+				<pre className="max-h-[60vh] overflow-auto rounded-md bg-muted px-4 py-3 text-sm leading-relaxed text-foreground">
+					<code>
+						{renderCodeContent(selectedView, true)}
+					</code>
 							</pre>
 							{selectedView.isEliminated && (
 								<span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-red-500/10">
@@ -497,40 +658,40 @@ export default function SpectateSession({ slug }: { slug: string }) {
 			<Dialog open={fullscreenOpen} onOpenChange={setFullscreenOpen}>
 				<DialogContent
 					showCloseButton={false}
-					className="left-0 top-0 h-screen max-h-screen w-screen max-w-screen translate-x-0 translate-y-0 rounded-none border-0 bg-background/95 p-6 sm:p-10"
+					fullScreen
+				className="bg-background/95 p-3 sm:p-6"
 				>
 					<DialogHeader className="sr-only">
 						<DialogTitle>Spectator fullscreen grid</DialogTitle>
 					</DialogHeader>
-					<div className="flex h-full flex-col gap-6">
-						<div className="flex flex-wrap items-center justify-between gap-4">
-							<div className="space-y-1">
-								<h2 className="text-2xl font-semibold">Spectator wall</h2>
-								<p className="text-sm text-muted-foreground">
-									Projected grid view of all {spectatorViews.length} participants.
-								</p>
+				<div className="flex h-full flex-col gap-3 overflow-hidden">
+					<div className="flex justify-end">
+						<Button
+							type="button"
+							variant="ghost"
+							size="sm"
+							onClick={() => setFullscreenOpen(false)}
+						>
+							Exit fullscreen
+						</Button>
+					</div>
+					<div className="flex-1 overflow-hidden rounded-lg bg-background/80 p-2 sm:p-4">
+						{spectatorViews.length === 0 ? (
+							<div className="flex h-full items-center justify-center text-lg text-muted-foreground">
+								No live participants available.
 							</div>
-							<Button type="button" variant="outline" onClick={() => setFullscreenOpen(false)}>
-								Exit fullscreen
-							</Button>
-						</div>
-						<div className="flex-1 overflow-hidden rounded-lg border border-border bg-card/60 p-4">
-							{spectatorViews.length === 0 ? (
-								<div className="flex h-full items-center justify-center text-lg text-muted-foreground">
-									No live participants available.
-								</div>
-							) : (
-								<div className="grid h-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-									{spectatorViews.map((participant) => (
-										<button
-											type="button"
-											key={`fullscreen-${participant.key}`}
-											onClick={() => {
-												setSelectedView(participant);
-												setViewerOpen(true);
-											}}
-											className="relative flex h-full flex-col justify-between overflow-hidden rounded-lg border border-border bg-background/90 p-4 text-left shadow transition hover:border-primary focus:outline-hidden focus:ring-4 focus:ring-primary/40"
-										>
+						) : (
+						<div className="grid h-full grid-cols-1 gap-2 overflow-auto md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+							{spectatorViews.map((participant) => (
+								<button
+									type="button"
+									key={`fullscreen-${participant.key}`}
+									onClick={() => {
+										setSelectedClientId(participant.clientId);
+										setViewerOpen(true);
+									}}
+									className="relative flex h-full flex-col justify-between overflow-hidden rounded-lg border border-border bg-background p-3 text-left transition focus:outline-hidden focus:ring-4 focus:ring-primary/40 sm:p-4"
+								>
 											<div className="flex items-center justify-between gap-3">
 												<div>
 													<p className="text-lg font-semibold text-foreground">
@@ -544,14 +705,18 @@ export default function SpectateSession({ slug }: { slug: string }) {
 													{participant.clientId.slice(0, 8)}
 												</Badge>
 											</div>
-											<pre className="mt-4 flex-1 overflow-auto rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
-												<code>{participant.placeholderCode}</code>
+									<pre className="mt-4 flex-1 overflow-auto rounded-md bg-muted px-3 py-2 text-sm text-slate-900 dark:text-slate-100">
+							<code>
+										{renderCodeContent(participant, true)}
+							</code>
 											</pre>
 											<div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
 												<span>{participant.cursorLabel}</span>
-												<span>
-													Seen {new Date(participant.lastSeen).toLocaleTimeString()}
-												</span>
+							<span>
+								{participant.lastCodeUpdated
+									? `Code ${new Date(participant.lastCodeUpdated).toLocaleTimeString()}`
+									: `Seen ${new Date(participant.lastSeen).toLocaleTimeString()}`}
+							</span>
 											</div>
 											{participant.isEliminated && (
 												<span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-red-500/15">

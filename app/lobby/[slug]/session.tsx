@@ -241,7 +241,7 @@ export default function LobbySession({ slug }: { slug: string }) {
 								<h3 className="font-medium">Your Connection</h3>
 								<div className="flex items-center gap-2 text-sm text-muted-foreground">
 									<div className="w-2 h-2 bg-green-500 rounded-full"></div>
-									Connected as {clientId.slice(0, 8)}
+					{clientId ? `Connected as ${clientId.slice(0, 8)}` : "Connecting..."}
 								</div>
 							</div>
 
