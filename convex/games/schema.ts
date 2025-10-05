@@ -14,9 +14,9 @@ export const gameTables = {
 			v.literal("countdown"),
 		),
 		countdownEndsAt: v.optional(v.number()),
-	problemSlug: v.optional(v.string()),
-	problemTitle: v.optional(v.string()),
-	problemDifficulty: v.optional(v.string()),
+		problemSlug: v.optional(v.string()),
+		problemTitle: v.optional(v.string()),
+		problemDifficulty: v.optional(v.string()),
 	})
 		.index("by_status", ["status"])
 		.index("by_slug", ["slug"])
@@ -37,6 +37,16 @@ export const gameTables = {
 		gameId: v.id("games"),
 		clientId: v.string(),
 		userId: v.optional(v.id("users")),
+		updatedAt: v.number(),
+	})
+		.index("by_game", ["gameId", "updatedAt"])
+		.index("by_game_client", ["gameId", "clientId"]),
+	cursorPositions: defineTable({
+		gameId: v.id("games"),
+		clientId: v.string(),
+		userId: v.optional(v.id("users")),
+		lineNumber: v.number(),
+		column: v.number(),
 		updatedAt: v.number(),
 	})
 		.index("by_game", ["gameId", "updatedAt"])

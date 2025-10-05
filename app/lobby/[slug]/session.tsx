@@ -4,8 +4,8 @@ import { useMutation } from "convex/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { api } from "@/convex/_generated/api";
 import { useGameConnection } from "@/components/useGameConnection";
+import { api } from "@/convex/_generated/api";
 
 export default function LobbySession({ slug }: { slug: string }) {
 	const router = useRouter();
@@ -23,9 +23,12 @@ export default function LobbySession({ slug }: { slug: string }) {
 	const [copied, setCopied] = useState(false);
 
 	const status = game?.status ?? "lobby";
-	const countdownSeconds = countdownMs === null ? null : Math.ceil(countdownMs / 1000);
+	const countdownSeconds =
+		countdownMs === null ? null : Math.ceil(countdownMs / 1000);
 	const isOwner =
-		game?.createdBy !== undefined && viewerId !== null && game.createdBy === viewerId;
+		game?.createdBy !== undefined &&
+		viewerId !== null &&
+		game.createdBy === viewerId;
 	const canStart = status === "lobby" && isOwner;
 	const countdownActive = status === "countdown" && countdownSeconds !== null;
 	const problemTitle = game?.problemTitle ?? game?.name ?? resolvedSlug;
@@ -101,8 +104,8 @@ export default function LobbySession({ slug }: { slug: string }) {
 							))}
 						</ul>
 					)}
-			</div>
-			<button
+				</div>
+				<button
 					type="button"
 					className="bg-slate-200 dark:bg-slate-800 text-foreground px-3 py-1 rounded-md"
 					onClick={async () => {
@@ -118,30 +121,30 @@ export default function LobbySession({ slug }: { slug: string }) {
 					}}
 				>
 					{copied ? "Copied!" : "Share lobby link"}
-			</button>
-			{isOwner && (
-				<button
-					type="button"
-					className="bg-foreground text-background px-4 py-2 rounded-md disabled:opacity-50"
-					disabled={!canStart || pending}
-					onClick={async () => {
-						if (!canStart || pending) return;
-						setPending(true);
-						try {
-							await beginCountdown({ slug: resolvedSlug, durationMs: 5000 });
-						} finally {
-							setPending(false);
-						}
-					}}
-				>
-					{pending ? "Starting..." : "Start game"}
 				</button>
-			)}
-			{!isOwner && status === "lobby" && (
-				<p className="text-xs text-slate-500 dark:text-slate-400">
-					Waiting for the host to start the game…
-				</p>
-			)}
+				{isOwner && (
+					<button
+						type="button"
+						className="bg-foreground text-background px-4 py-2 rounded-md disabled:opacity-50"
+						disabled={!canStart || pending}
+						onClick={async () => {
+							if (!canStart || pending) return;
+							setPending(true);
+							try {
+								await beginCountdown({ slug: resolvedSlug, durationMs: 5000 });
+							} finally {
+								setPending(false);
+							}
+						}}
+					>
+						{pending ? "Starting..." : "Start game"}
+					</button>
+				)}
+				{!isOwner && status === "lobby" && (
+					<p className="text-xs text-slate-500 dark:text-slate-400">
+						Waiting for the host to start the game…
+					</p>
+				)}
 				<Link
 					href={`/game/${resolvedSlug}`}
 					className="text-sm underline hover:no-underline text-foreground"

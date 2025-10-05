@@ -5,9 +5,10 @@
 
 // Simple token generation using crypto.randomUUID and Math.random
 function generateSecureToken(length: number = 32): string {
-	const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+	const chars =
+		"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 	let result = "";
-	
+
 	// Use crypto.randomUUID if available, otherwise fall back to Math.random
 	if (typeof crypto !== "undefined" && crypto.randomUUID) {
 		// Generate multiple UUIDs and combine them for longer tokens
@@ -21,7 +22,7 @@ function generateSecureToken(length: number = 32): string {
 			result += chars.charAt(Math.floor(Math.random() * chars.length));
 		}
 	}
-	
+
 	return result.substring(0, length);
 }
 
@@ -36,9 +37,13 @@ export const emailProvider = {
 
 	async sendVerificationEmail(email: string, token: string): Promise<void> {
 		// Temporarily disabled to debug MessageChannel error
-		console.log(`Verification email would be sent to ${email} with token: ${token}`);
-		console.log(`Verification URL: ${process.env.NEXT_PUBLIC_SITE_URL}/verify-email?token=${token}&email=${encodeURIComponent(email)}`);
-		
+		console.log(
+			`Verification email would be sent to ${email} with token: ${token}`,
+		);
+		console.log(
+			`Verification URL: ${process.env.NEXT_PUBLIC_SITE_URL}/verify-email?token=${token}&email=${encodeURIComponent(email)}`,
+		);
+
 		// TODO: Re-enable Resend email sending once MessageChannel issue is resolved
 		/*
 		const verificationUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/verify-email?token=${token}&email=${encodeURIComponent(email)}`;
@@ -75,9 +80,13 @@ export const emailProvider = {
 
 	async sendPasswordResetEmail(email: string, token: string): Promise<void> {
 		// Temporarily disabled to debug MessageChannel error
-		console.log(`Password reset email would be sent to ${email} with token: ${token}`);
-		console.log(`Reset URL: ${process.env.NEXT_PUBLIC_SITE_URL}/reset-password/${token}`);
-		
+		console.log(
+			`Password reset email would be sent to ${email} with token: ${token}`,
+		);
+		console.log(
+			`Reset URL: ${process.env.NEXT_PUBLIC_SITE_URL}/reset-password/${token}`,
+		);
+
 		// TODO: Re-enable Resend email sending once MessageChannel issue is resolved
 		/*
 		const resetUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password/${token}`;

@@ -18,6 +18,7 @@ export function useGameConnection(initialSlug: string, basePath: string) {
 	const finalizeStart = useMutation(api.games.completeGameStart);
 	const presence = useQuery(api.games.activePresence, { slug });
 	const game = useQuery(api.games.getGame, { slug });
+	const cursors = useQuery(api.games.activeCursorPositions, { slug });
 	const [countdownMs, setCountdownMs] = useState<number | null>(null);
 
 	useEffect(() => {
@@ -91,5 +92,6 @@ export function useGameConnection(initialSlug: string, basePath: string) {
 		game,
 		countdownMs,
 		viewerId: game?.viewerId ?? null,
+		cursorPositions: cursors ?? [],
 	};
 }

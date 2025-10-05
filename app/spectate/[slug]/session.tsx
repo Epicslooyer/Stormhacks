@@ -30,7 +30,8 @@ export default function SpectateSession({ slug }: { slug: string }) {
 		return () => clearInterval(interval);
 	}, [countdownEndsAt]);
 
-	const countdownSeconds = countdownMs === null ? null : Math.ceil(countdownMs / 1000);
+	const countdownSeconds =
+		countdownMs === null ? null : Math.ceil(countdownMs / 1000);
 
 	const visibleParticipants = useMemo(() => {
 		return participants.map((presence) => {
@@ -62,7 +63,8 @@ export default function SpectateSession({ slug }: { slug: string }) {
 			<main className="p-8 flex flex-col gap-4 max-w-3xl mx-auto text-center">
 				<h1 className="text-2xl font-semibold">Game not found</h1>
 				<p className="text-sm text-slate-500 dark:text-slate-400">
-					We couldn&apos;t locate a game with ID <span className="font-mono">{slug}</span>.
+					We couldn&apos;t locate a game with ID{" "}
+					<span className="font-mono">{slug}</span>.
 				</p>
 			</main>
 		);
@@ -71,9 +73,7 @@ export default function SpectateSession({ slug }: { slug: string }) {
 	return (
 		<main className="p-8 flex flex-col gap-6 max-w-3xl mx-auto">
 			<header className="flex flex-col gap-1 text-center">
-				<h1 className="text-3xl font-bold">
-					Spectating {game.name}
-				</h1>
+				<h1 className="text-3xl font-bold">Spectating {game.name}</h1>
 				<p className="text-sm text-slate-600 dark:text-slate-400">
 					Status: {status ?? "unknown"}
 				</p>
