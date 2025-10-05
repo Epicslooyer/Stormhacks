@@ -10,6 +10,7 @@ export const roundTables = {
 		slug: v.string(),
 		// Player-specific data (customize as needed)
 		code: v.optional(v.string()),
+		testCasesPassed: v.optional(v.number()),
 	})
 		.index("by_game", ["gameId"])
 		.index("by_user", ["userId"])

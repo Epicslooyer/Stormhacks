@@ -1,3 +1,63 @@
+export const getScoresForGame = query({
+	args: {
+		slug: v.string(),
+	},
+	handler: async (ctx, args) => {
+		const game = await getGameBySlug(ctx.db, args.slug);
+		if (!game) throw new Error("Game not found");
+		const scores = await ctx.db
+			.query("gameScores")
+			.withIndex("by_game", (q) => q.eq("gameId", game._id))
+			.collect();
+		// Sort by score ascending (fastest first)
+		return scores
+			.map((s) => ({
+				playerName: s.playerName,
+				score: s.score,
+				clientId: s.clientId,
+				userId: s.userId ?? null,
+				submittedAt: s.submittedAt,
+			}))
+			.sort((a, b) => a.score - b.score);
+	},
+});
+export const submitScore = mutation({
+	args: {
+		slug: v.string(),
+		clientId: v.string(),
+		playerName: v.string(),
+		score: v.number(), // seconds
+	},
+	handler: async (ctx, args) => {
+		const game = await getGameBySlug(ctx.db, args.slug);
+		if (!game) throw new Error("Game not found");
+		const userId = await getAuthUserId(ctx);
+		const now = Date.now();
+		// Only allow one score per clientId per game
+		const existing = await ctx.db
+			.query("gameScores")
+			.withIndex("by_game_client", (q) => q.eq("gameId", game._id).eq("clientId", args.clientId))
+			.unique();
+		if (existing) {
+			await ctx.db.patch(existing._id, {
+				score: args.score,
+				playerName: args.playerName,
+				submittedAt: now,
+				userId: userId ?? undefined,
+			});
+			return { updated: true };
+		}
+		await ctx.db.insert("gameScores", {
+			gameId: game._id,
+			userId: userId ?? undefined,
+			clientId: args.clientId,
+			playerName: args.playerName,
+			score: args.score,
+			submittedAt: now,
+		});
+		return { updated: false };
+	},
+});
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";

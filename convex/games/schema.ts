@@ -52,4 +52,15 @@ export const gameTables = {
 	})
 		.index("by_game", ["gameId", "updatedAt"])
 		.index("by_game_client", ["gameId", "clientId"]),
+	gameScores: defineTable({
+		gameId: v.id("games"),
+		userId: v.optional(v.id("users")),
+		clientId: v.string(),
+		playerName: v.string(),
+		score: v.number(), // seconds
+		submittedAt: v.number(),
+	})
+		.index("by_game", ["gameId"])
+		.index("by_game_user", ["gameId", "userId"])
+		.index("by_game_client", ["gameId", "clientId"]),
 };
