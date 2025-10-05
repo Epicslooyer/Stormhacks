@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: "Leet Royale",
+	title: "Code Royale",
 	description: "LeetCode Battle Royale",
 	icons: {
 		icon: "/convex.svg",

@@ -27,7 +27,7 @@ export function HomeHeader() {
 						/>
 					</span>
 					<span className="bg-gradient-to-r from-[#fce28b] via-[#f4c94c] to-[#d6932d] bg-clip-text text-transparent">
-						Leet Royale
+						Code Royale
 					</span>
 				</Link>
 				<nav
