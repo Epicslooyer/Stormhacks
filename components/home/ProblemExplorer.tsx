@@ -275,7 +275,7 @@ function ProblemCard({
 			if (labels.length === 3) break;
 		}
 		return labels;
-	}, [problem.tags, presetTags, details?.topicTags]);
+	}, [presetTags, details?.topicTags]);
 	const showTagsLoading = shouldFetchDetails && tagsPending && topicTags.length === 0;
 
 	return (

@@ -420,9 +420,9 @@ export default function LobbySession({ slug }: { slug: string }) {
 									</div>
 								</div>
 									) : (
-										<div className={`${softPanelClassName} text-center`}>
-											No test cases available. Click "Generate Test Cases" to create them.
-										</div>
+																<div className={`${softPanelClassName} text-center`}>
+																	No test cases available. Click &quot;Generate Test Cases&quot; to create them.
+																</div>
 									)}
 								</CardContent>
 							</Card>

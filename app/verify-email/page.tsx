@@ -178,7 +178,7 @@ export default function VerifyEmail() {
 
 			<div className="text-center">
 				<p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-					Didn't receive the email?
+					Didn&apos;t receive the email?
 				</p>
 				<button
 					type="button"

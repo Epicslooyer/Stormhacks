@@ -95,7 +95,6 @@ export default function SpectateSession({ slug }: { slug: string }) {
 
 	const status = game?.status ?? null;
 	const presenceCount = presence?.count ?? 0;
-	const participants = presence?.participants ?? [];
 	const problemTitle = game?.problemTitle ?? game?.name ?? slug;
 	const problemDifficulty = game?.problemDifficulty ?? null;
 	const countdownEndsAt = game?.countdownEndsAt ?? null;
@@ -142,20 +141,19 @@ export default function SpectateSession({ slug }: { slug: string }) {
 		countdownMs === null ? null : Math.ceil(countdownMs / 1000);
 
 	const visibleParticipants = useMemo<VisibleParticipant[]>(() => {
-		return participants.map((presence) => {
-			const isGuest = presence.userId === null;
-			const baseLabel = isGuest
-				? presence.clientId.slice(0, 8)
-				: String(presence.userId).slice(0, 8);
+		const src = presence?.participants ?? [];
+		return src.map((p) => {
+			const isGuest = p.userId === null;
+			const baseLabel = isGuest ? p.clientId.slice(0, 8) : String(p.userId).slice(0, 8);
 			return {
-				key: isGuest ? `anon-${presence.clientId}` : String(presence.userId),
+				key: isGuest ? `anon-${p.clientId}` : String(p.userId),
 				label: baseLabel,
-				lastSeen: presence.lastSeen,
+				lastSeen: p.lastSeen,
 				isGuest,
-				clientId: presence.clientId,
+				clientId: p.clientId,
 			};
 		});
-	}, [participants]);
+	}, [presence?.participants]);
 
 	useEffect(() => {
 		setParticipantOrder((previous) => {

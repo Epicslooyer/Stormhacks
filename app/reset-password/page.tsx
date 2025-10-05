@@ -63,10 +63,10 @@ export default function ResetPasswordRequest() {
 						Check Your Email
 					</h1>
 					<p className="text-gray-600 dark:text-gray-400 mb-4">
-						We've sent a password reset link to <strong>{email}</strong>
+							We&apos;ve sent a password reset link to <strong>{email}</strong>
 					</p>
 					<p className="text-sm text-gray-500 dark:text-gray-400">
-						The link will expire in 1 hour. If you don't see the email, check
+							The link will expire in 1 hour. If you don&apos;t see the email, check
 						your spam folder.
 					</p>
 				</div>
@@ -104,7 +104,7 @@ export default function ResetPasswordRequest() {
 				</div>
 				<h1 className="text-2xl font-bold mb-2">Reset Your Password</h1>
 				<p className="text-gray-600 dark:text-gray-400">
-					Enter your email address and we'll send you a link to reset your
+					Enter your email address and we&apos;ll send you a link to reset your
 					password.
 				</p>
 			</div>
