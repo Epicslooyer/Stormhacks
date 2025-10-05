@@ -48,6 +48,7 @@ export default function SpectateSession({ slug }: { slug: string }) {
 	const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 	const [viewerOpen, setViewerOpen] = useState(false);
 	const [fullscreenOpen, setFullscreenOpen] = useState(false);
+	const [participantOrder, setParticipantOrder] = useState<string[]>([]);
 
 	const status = game?.status ?? null;
 	const presenceCount = presence?.count ?? 0;
@@ -88,6 +89,35 @@ export default function SpectateSession({ slug }: { slug: string }) {
 			};
 		});
 	}, [participants]);
+
+	useEffect(() => {
+		setParticipantOrder((previous) => {
+			const activeClientIds = new Set(
+				visibleParticipants.map((participant) => participant.clientId),
+			);
+			const filtered = previous.filter((clientId) => activeClientIds.has(clientId));
+			const additions = visibleParticipants
+				.map((participant) => participant.clientId)
+				.filter((clientId) => !filtered.includes(clientId));
+			return [...filtered, ...additions];
+		});
+	}, [visibleParticipants]);
+
+	const orderedParticipants = useMemo(() => {
+		const orderLookup = new Map(
+			participantOrder.map((clientId, index) => [clientId, index] as const),
+		);
+		return [...visibleParticipants].sort((a, b) => {
+			const orderA = orderLookup.get(a.clientId);
+			const orderB = orderLookup.get(b.clientId);
+			if (orderA === undefined && orderB === undefined) {
+				return a.clientId.localeCompare(b.clientId);
+			}
+			if (orderA === undefined) return 1;
+			if (orderB === undefined) return -1;
+			return orderA - orderB;
+		});
+	}, [participantOrder, visibleParticipants]);
 
 	const cursorMap = useMemo(() => {
 		const map = new Map<string, {
@@ -143,7 +173,7 @@ export default function SpectateSession({ slug }: { slug: string }) {
 	}, [eliminatedParticipants]);
 
 	const spectatorViews = useMemo<SpectatorView[]>(() => {
-		return visibleParticipants.map((participant) => {
+		return orderedParticipants.map((participant) => {
 			const snapshot = codeSnapshotMap.get(participant.clientId);
 			const cursor = cursorMap.get(participant.clientId);
 			const code = snapshot?.code ?? `// ${participant.label}\n// Waiting for live code…`;
@@ -165,7 +195,7 @@ export default function SpectateSession({ slug }: { slug: string }) {
 				lastCodeUpdated,
 			};
 		});
-	}, [cursorMap, eliminatedSet, codeSnapshotMap, visibleParticipants]);
+	}, [cursorMap, eliminatedSet, codeSnapshotMap, orderedParticipants]);
 
 	const selectedView = useMemo(() => {
 		if (!selectedClientId) {
@@ -423,13 +453,13 @@ export default function SpectateSession({ slug }: { slug: string }) {
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-3">
-							{visibleParticipants.length === 0 ? (
+					{orderedParticipants.length === 0 ? (
 								<div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/40 p-6 text-center text-sm text-muted-foreground">
 									No active players detected right now.
 								</div>
 							) : (
 								<div className="space-y-3">
-									{visibleParticipants.map((player, index) => (
+							{orderedParticipants.map((player, index) => (
 										<div
 											key={player.key}
 											className="flex items-center justify-between rounded-lg border border-border bg-card/80 p-3"
