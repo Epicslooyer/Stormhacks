@@ -184,6 +184,16 @@ export const beginCountdown = mutation({
 			createdBy: ownerId,
 			countdownEndsAt,
 		});
+
+		// Send system message about countdown starting
+		await ctx.db.insert("chats", {
+			gameId: game._id,
+			authorId: undefined,
+			message: `🚀 Game countdown started! Game begins in ${Math.ceil(countdownDuration / 1000)} seconds.`,
+			sentAt: Date.now(),
+			isSystem: true,
+		});
+
 		return { status: "countdown", countdownEndsAt };
 	},
 });
@@ -213,6 +223,16 @@ export const completeGameStart = mutation({
 			status: "active",
 			countdownEndsAt: undefined,
 		});
+
+		// Send system message about game starting
+		await ctx.db.insert("chats", {
+			gameId: game._id,
+			authorId: undefined,
+			message: `🎮 Game is now active! Good luck to all players!`,
+			sentAt: Date.now(),
+			isSystem: true,
+		});
+
 		return { status: "active", countdownEndsAt: null };
 	},
 });
@@ -249,6 +269,16 @@ export const heartbeatPresence = mutation({
 			userId: userId ?? undefined,
 			updatedAt: now,
 			isReady: false,
+		});
+
+		// Send system message about player joining
+		const playerName = userId ? "A player" : "A spectator";
+		await ctx.db.insert("chats", {
+			gameId: game._id,
+			authorId: undefined,
+			message: `👋 ${playerName} joined the game!`,
+			sentAt: Date.now(),
+			isSystem: true,
 		});
 
 		return { updated: false };

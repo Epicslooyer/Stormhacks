@@ -20,6 +20,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import SpectatorChat from "@/components/SpectatorChat";
 
 type VisibleParticipant = {
 	key: string;
@@ -361,6 +362,7 @@ export default function SpectateSession({ slug }: { slug: string }) {
 								</div>
 							</CardContent>
 						</Card>
+						<SpectatorChat gameId={game._id} />
 						<Card>
 							<CardHeader>
 								<CardTitle className="text-lg">Jump into the action</CardTitle>

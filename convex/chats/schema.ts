@@ -4,7 +4,7 @@ import { v } from "convex/values";
 export const chatTables = {
 	chats: defineTable({
 		gameId: v.id("games"),
-		authorId: v.id("users"),
+		authorId: v.optional(v.id("users")),
 		message: v.string(),
 		sentAt: v.number(),
 		editedAt: v.optional(v.number()),
