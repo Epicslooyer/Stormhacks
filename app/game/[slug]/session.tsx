@@ -419,7 +419,7 @@ export default function GameSession({ slug }: { slug: string }) {
 					language: selectedLanguage || "python",
 					testCases: testCases.testCases,
 					problemTitle: problem?.title,
-					problemDescription: problem?.description,
+					problemDescription: problem?.content ?? undefined,
 				}),
 			});
 
