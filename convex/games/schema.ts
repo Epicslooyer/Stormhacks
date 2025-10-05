@@ -68,10 +68,22 @@ export const gameTables = {
 		userId: v.optional(v.id("users")),
 		clientId: v.string(),
 		playerName: v.string(),
-		score: v.number(), // seconds
+		// Scoring components (optional for backward compatibility)
+		completionTime: v.optional(v.number()), // milliseconds to complete
+		oNotation: v.optional(v.string()), // detected O notation (e.g., "O(n)", "O(n^2)")
+		testCasesPassed: v.optional(v.number()), // number of test cases passed
+		totalTestCases: v.optional(v.number()), // total number of test cases
+		calculatedScore: v.optional(v.number()), // final calculated score
+		// Legacy field for backward compatibility
+		score: v.number(), // seconds (deprecated, use completionTime)
 		submittedAt: v.number(),
+		// Game state
+		isEliminated: v.optional(v.boolean()),
+		eliminatedAt: v.optional(v.number()),
 	})
 		.index("by_game", ["gameId"])
 		.index("by_game_user", ["gameId", "userId"])
-		.index("by_game_client", ["gameId", "clientId"]),
+		.index("by_game_client", ["gameId", "clientId"])
+		.index("by_game_score", ["gameId", "calculatedScore"])
+		.index("by_game_eliminated", ["gameId", "isEliminated"]),
 };

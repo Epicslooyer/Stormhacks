@@ -20,6 +20,8 @@ import { useProblemDetails } from "@/components/useProblemDetails";
 import { useTestCases } from "@/components/useTestCases";
 import { CodeExecutor } from "@/components/CodeExecutor";
 import SpectatorChat from "@/components/SpectatorChat";
+import { useGameTimer } from "@/hooks/useGameTimer";
+import { formatTime, formatScore, getScoreGrade } from "@/lib/scoring";
 import type { CodeSnippet } from "leetcode-query";
 import { api } from "@/convex/_generated/api";
 // @ts-ignore - monaco-editor types not available
@@ -74,12 +76,22 @@ export default function GameSession({ slug }: { slug: string }) {
 	);
 	const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
 	const [code, setCode] = useState("");
+	const [gameStarted, setGameStarted] = useState(false);
+	const [submitted, setSubmitted] = useState(false);
 	const userEditedRef = useRef(false);
 	const languageSelectId = useId();
+	
+	// Game timer
+	const gameTimer = useGameTimer();
+	
+	// Convex mutations and queries
 	const updateCursorPosition = useMutation(api.games.updateCursorPosition);
 	const updateCodeState = useMutation(api.games.updateCodeState);
 	const submitScore = useMutation(api.games.submitScore);
+	const checkEliminationThreshold = useMutation(api.games.checkEliminationThreshold);
 	const scores = useQuery(api.games.getScoresForGame, { slug: resolvedSlug });
+	const leaderboard = useQuery(api.games.getGameLeaderboard, { slug: resolvedSlug });
+	const gameWinner = useQuery(api.games.getGameWinner, { slug: resolvedSlug });
 	const editorRef = useRef<MonacoEditorNS.IStandaloneCodeEditor | null>(null);
 	const cursorListenerRef = useRef<IDisposable | null>(null);
 	const pendingCursorRef = useRef<{ lineNumber: number; column: number } | null>(
@@ -95,6 +107,14 @@ export default function GameSession({ slug }: { slug: string }) {
 		code: "",
 		language: null,
 	});
+
+	// Start game timer when countdown ends
+	useEffect(() => {
+		if (countdownMs === 0 && !gameStarted) {
+			setGameStarted(true);
+			gameTimer.start();
+		}
+	}, [countdownMs, gameStarted, gameTimer]);
 
 	const handleEditorMount = useCallback(
 		(editorInstance: MonacoEditorNS.IStandaloneCodeEditor) => {
@@ -509,13 +529,25 @@ export default function GameSession({ slug }: { slug: string }) {
 			const data = await response.json();
 			const results = data.results;
 			const summary = data.summary;
+			const scoring = data.scoring;
 			const feedback = data.feedback;
+			
+			// Stop the timer
+			gameTimer.stop();
 			
 			let outputText = `🎯 FINAL SUBMISSION RESULTS\n`;
 			outputText += `============================\n`;
 			outputText += `Status: ${summary.passedTests === summary.totalTests ? "✅ ACCEPTED" : "❌ REJECTED"}\n`;
 			outputText += `Score: ${summary.passedTests}/${summary.totalTests} tests passed\n`;
-			outputText += `Total time: ${summary.totalTime}ms\n\n`;
+			outputText += `Total time: ${summary.totalTime}ms\n`;
+			outputText += `Completion time: ${formatTime(gameTimer.elapsedTime)}\n`;
+			outputText += `O Notation: ${scoring.oNotation || "Unknown"}\n`;
+			outputText += `Final Score: ${formatScore(scoring.calculatedScore)} (${getScoreGrade(scoring.calculatedScore)})\n\n`;
+			
+			outputText += `📊 SCORE BREAKDOWN:\n`;
+			outputText += `Time Score: ${formatScore(scoring.scoreBreakdown.timeScore)}\n`;
+			outputText += `Efficiency Score: ${formatScore(scoring.scoreBreakdown.efficiencyScore)}\n`;
+			outputText += `Correctness Score: ${formatScore(scoring.scoreBreakdown.correctnessScore)}\n\n`;
 			
 			results.forEach((result: any, index: number) => {
 				const status = result.passed ? "✅ PASSED" : "❌ FAILED";
@@ -541,15 +573,24 @@ export default function GameSession({ slug }: { slug: string }) {
 				outputText += `All test cases passed successfully. Great job! 🚀\n\n`;
 				outputText += `🏆 You have completed this problem! Your score has been recorded.`;
 				
-				// Submit score to mark player as done
+				// Submit comprehensive score
 				try {
 					await submitScore({
 						slug: resolvedSlug,
 						clientId,
 						playerName: `Player ${clientId.slice(0, 8)}`,
-						score: Math.floor(summary.totalTime / 1000), // Convert to seconds
+						completionTime: gameTimer.elapsedTime,
+						oNotation: scoring.oNotation,
+						testCasesPassed: summary.passedTests,
+						totalTestCases: summary.totalTests,
+						calculatedScore: scoring.calculatedScore,
 					});
+					
+					setSubmitted(true);
 					outputText += `\n✅ Score submitted successfully!`;
+					
+					// Check for elimination threshold
+					await checkEliminationThreshold({ slug: resolvedSlug });
 				} catch (error) {
 					console.error("Failed to submit score:", error);
 					outputText += `\n⚠️ Score submission failed, but your solution is correct!`;
@@ -666,6 +707,32 @@ export default function GameSession({ slug }: { slug: string }) {
 							<p className="text-muted-foreground">
 								Waiting for the host to begin the game…
 							</p>
+						)}
+						{gameStarted && !submitted && (
+							<div className="flex items-center gap-4">
+								<div className="text-center">
+									<p className="text-sm text-muted-foreground">Time</p>
+									<p className="font-mono text-lg font-bold text-foreground">
+										{gameTimer.getFormattedTime()}
+									</p>
+								</div>
+								{gameWinner && !gameWinner.isGameOver && gameWinner.leader && (
+									<div className="text-center">
+										<p className="text-sm text-muted-foreground">Leader</p>
+										<p className="font-semibold text-foreground">
+											{gameWinner.leader.playerName}
+										</p>
+									</div>
+								)}
+							</div>
+						)}
+						{submitted && (
+							<div className="text-center">
+								<p className="text-sm text-muted-foreground">Final Time</p>
+								<p className="font-mono text-lg font-bold text-green-600">
+									{gameTimer.getFormattedTime()}
+								</p>
+							</div>
 						)}
 						<Button
 							variant="outline"
@@ -833,7 +900,85 @@ export default function GameSession({ slug }: { slug: string }) {
 					</div>
 				</div>
 				{game && (
-					<div className="lg:basis-[25%] lg:shrink-0">
+					<div className="flex flex-col gap-4 lg:basis-[25%] lg:shrink-0">
+						{/* Leaderboard */}
+						{leaderboard && leaderboard.leaderboard.length > 0 && (
+							<div className="rounded-xl border border-border bg-card">
+								<div className="border-b border-border px-4 py-3">
+									<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+										Leaderboard
+									</p>
+								</div>
+								<div className="max-h-64 overflow-y-auto">
+									{leaderboard.leaderboard.slice(0, 10).map((player, index) => (
+										<div
+											key={player.clientId}
+											className={cn(
+												"flex items-center justify-between px-4 py-2",
+												index === 0 && "bg-yellow-50 dark:bg-yellow-950/20",
+												index === 1 && "bg-gray-50 dark:bg-gray-950/20",
+												index === 2 && "bg-orange-50 dark:bg-orange-950/20",
+											)}
+										>
+											<div className="flex items-center gap-2">
+												<span className="text-sm font-medium">
+													{index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}.`}
+												</span>
+												<span className="text-sm font-medium truncate">
+													{player.playerName}
+												</span>
+											</div>
+											<div className="text-right">
+												<div className="text-sm font-bold">
+													{formatScore(player.calculatedScore ?? 0)}
+												</div>
+												<div className="text-xs text-muted-foreground">
+													{formatTime(player.completionTime ?? 0)}
+												</div>
+											</div>
+										</div>
+									))}
+								</div>
+								{leaderboard.eliminatedPlayers.length > 0 && (
+									<div className="border-t border-border px-4 py-2">
+										<p className="text-xs text-muted-foreground">
+											{leaderboard.eliminatedCount} eliminated
+										</p>
+									</div>
+								)}
+							</div>
+						)}
+						
+						{/* Game Status */}
+						{gameWinner && (
+							<div className="rounded-xl border border-border bg-card p-4">
+								{gameWinner.isGameOver ? (
+									<div className="text-center">
+										<h3 className="font-bold text-lg text-green-600">🏆 Game Over!</h3>
+										<p className="text-sm text-muted-foreground mt-1">
+											Winner: {gameWinner.winner?.playerName}
+										</p>
+										<p className="text-sm font-medium">
+											Score: {formatScore(gameWinner.winner?.calculatedScore ?? 0)}
+										</p>
+									</div>
+								) : gameWinner.leader ? (
+									<div className="text-center">
+										<h3 className="font-semibold">Current Leader</h3>
+										<p className="text-sm text-muted-foreground">
+											{gameWinner.leader.playerName}
+										</p>
+										<p className="text-sm font-medium">
+											{formatScore(gameWinner.leader.calculatedScore ?? 0)}
+										</p>
+										<p className="text-xs text-muted-foreground">
+											{gameWinner.activePlayersCount} players remaining
+										</p>
+									</div>
+								) : null}
+							</div>
+						)}
+						
 						<SpectatorChat gameId={game._id} />
 					</div>
 				)}
