@@ -190,7 +190,6 @@ function ProblemCard({
 					<h3 className="text-base font-semibold text-slate-900 dark:text-white">
 						{problem.title}
 					</h3>
-					<p className="text-xs text-slate-500 dark:text-slate-400">Slug: {problem.slug}</p>
 				</div>
 				<Badge className={cn("rounded-md border px-2.5 py-1 text-[0.65rem] font-semibold uppercase", difficultyBadgeClassName(problem.difficulty))}>
 					{problem.difficulty}

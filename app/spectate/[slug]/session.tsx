@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/convex/_generated/api";
+import { Badge } from "@/components/ui/badge";
 
 export default function SpectateSession({ slug }: { slug: string }) {
 	const game = useQuery(api.games.getGame, { slug });
@@ -51,6 +52,12 @@ export default function SpectateSession({ slug }: { slug: string }) {
 	if (game === undefined) {
 		return (
 			<main className="p-8 flex flex-col gap-4 max-w-3xl mx-auto text-center">
+				<Link
+					href="/spectate"
+					className="self-start text-sm text-muted-foreground underline underline-offset-2"
+				>
+					← Back to all games
+				</Link>
 				<p className="text-sm text-slate-500 dark:text-slate-400">
 					Loading game information…
 				</p>
@@ -61,6 +68,12 @@ export default function SpectateSession({ slug }: { slug: string }) {
 	if (game === null) {
 		return (
 			<main className="p-8 flex flex-col gap-4 max-w-3xl mx-auto text-center">
+				<Link
+					href="/spectate"
+					className="self-start text-sm text-muted-foreground underline underline-offset-2"
+				>
+					← Back to all games
+				</Link>
 				<h1 className="text-2xl font-semibold">Game not found</h1>
 				<p className="text-sm text-slate-500 dark:text-slate-400">
 					We couldn&apos;t locate a game with ID{" "}
@@ -72,11 +85,24 @@ export default function SpectateSession({ slug }: { slug: string }) {
 
 	return (
 		<main className="p-8 flex flex-col gap-6 max-w-3xl mx-auto">
+			<Link
+				href="/spectate"
+				className="text-sm text-muted-foreground underline underline-offset-2 w-fit"
+			>
+				← Back to all games
+			</Link>
 			<header className="flex flex-col gap-1 text-center">
 				<h1 className="text-3xl font-bold">Spectating {game.name}</h1>
-				<p className="text-sm text-slate-600 dark:text-slate-400">
-					Status: {status ?? "unknown"}
-				</p>
+				<div className="flex items-center justify-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+					<span>Status</span>
+					{status ? (
+						<Badge variant="outline" className="uppercase">
+							{status}
+						</Badge>
+					) : (
+						<span className="text-muted-foreground">unknown</span>
+					)}
+				</div>
 				<p className="text-sm text-slate-500 dark:text-slate-400">
 					Problem: {problemTitle}
 					{problemDifficulty ? ` · ${problemDifficulty}` : ""}

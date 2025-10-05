@@ -2,6 +2,7 @@
 
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth } from "convex/react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -12,10 +13,22 @@ export function HomeHeader() {
 		<header className="sticky top-0 z-10 border-b border-white/60 bg-white/90 backdrop-blur-xl shadow-sm dark:border-white/20 dark:bg-slate-950/80">
 			<div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-4 py-3 sm:px-6 md:py-4">
 				<Link
-					className="text-lg font-semibold tracking-tight bg-gradient-to-r from-[#fce28b] via-[#f4c94c] to-[#d6932d] bg-clip-text text-transparent"
+					className="flex items-center gap-2 text-lg font-semibold tracking-tight"
 					href="/"
 				>
-					Leet Royale
+					<span className="relative inline-flex h-7 w-7 items-center justify-center">
+						<Image
+							src="/crown.png"
+							alt="Clash Royale crown"
+							width={28}
+							height={28}
+							priority
+							className="h-full w-full object-contain"
+						/>
+					</span>
+					<span className="bg-gradient-to-r from-[#fce28b] via-[#f4c94c] to-[#d6932d] bg-clip-text text-transparent">
+						Leet Royale
+					</span>
 				</Link>
 				<nav
 					aria-label="Primary"

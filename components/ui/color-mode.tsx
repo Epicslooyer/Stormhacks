@@ -9,17 +9,21 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 
-export interface ColorModeProviderProps extends ThemeProviderProps {}
+export interface ColorModeProviderProps extends Omit<ThemeProviderProps, "defaultTheme" | "enableSystem"> {}
 
-export function ColorModeProvider(props: ColorModeProviderProps) {
+export function ColorModeProvider({ children, ...props }: ColorModeProviderProps) {
 	return (
 		<ThemeProvider
 			attribute="class"
-			defaultTheme="system"
-			enableSystem
+			defaultTheme="light"
+			enableSystem={false}
+			themes={["light", "dark"]}
+			storageKey="color-mode"
 			disableTransitionOnChange
 			{...props}
-		/>
+		>
+			{children}
+		</ThemeProvider>
 	)
 }
 
@@ -33,12 +37,12 @@ export interface UseColorModeReturn {
 
 export function useColorMode(): UseColorModeReturn {
 	const { resolvedTheme, setTheme, forcedTheme } = useTheme()
-	const colorMode = forcedTheme || resolvedTheme || "light"
+	const colorMode = (forcedTheme || resolvedTheme || "light") as ColorMode
 	const toggleColorMode = () => {
 		setTheme(colorMode === "dark" ? "light" : "dark")
 	}
 	return {
-		colorMode: colorMode as ColorMode,
+		colorMode,
 		setColorMode: setTheme,
 		toggleColorMode,
 	}

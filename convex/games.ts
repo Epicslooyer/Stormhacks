@@ -7,6 +7,13 @@ import { mutation, query } from "./_generated/server";
 const PRESENCE_TTL = 1000 * 15;
 const CURSOR_TTL = 1000 * 10;
 
+const gameStatusValidator = v.union(
+	v.literal("lobby"),
+	v.literal("active"),
+	v.literal("completed"),
+	v.literal("countdown"),
+);
+
 async function getGameBySlug(
 	db: DatabaseReader,
 	slug: string,
@@ -350,5 +357,61 @@ export const activeCursorPositions = query({
 				column: cursor.column,
 				lastUpdated: cursor.updatedAt,
 			}));
+	},
+});
+
+export const listGamesByStatus = query({
+	args: {
+		statuses: v.array(gameStatusValidator),
+	},
+	handler: async (ctx, args) => {
+		if (args.statuses.length === 0) {
+			return [];
+		}
+		const now = Date.now();
+		const cutoff = now - PRESENCE_TTL;
+		const games = (
+			await Promise.all(
+				args.statuses.map((status) =>
+					ctx.db
+						.query("games")
+						.withIndex("by_status", (q) => q.eq("status", status))
+						.collect(),
+				),
+			)
+		)
+			.flat()
+			.sort((a, b) => b.createdAt - a.createdAt);
+
+		const enriched = await Promise.all(
+			games.map(async (game) => {
+				const presences = await ctx.db
+					.query("gamePresences")
+					.withIndex("by_game", (q) => q.eq("gameId", game._id))
+					.collect();
+				const activePresences = presences.filter(
+					(presence) => presence.updatedAt >= cutoff,
+				);
+				const readyCount = activePresences.filter(
+					(presence) => presence.isReady === true,
+				).length;
+				return {
+					_id: game._id,
+					slug: game.slug,
+					name: game.name,
+					status: game.status,
+					createdAt: game.createdAt,
+					createdBy: game.createdBy ?? null,
+					countdownEndsAt: game.countdownEndsAt ?? null,
+					problemSlug: game.problemSlug ?? null,
+					problemTitle: game.problemTitle ?? null,
+					problemDifficulty: game.problemDifficulty ?? null,
+					presenceCount: activePresences.length,
+					readyCount,
+				};
+			}),
+		);
+
+		return enriched;
 	},
 });
