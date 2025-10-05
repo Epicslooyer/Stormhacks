@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
@@ -33,23 +33,50 @@ interface ChatMessage {
 export default function SpectatorChat({ gameId, className }: SpectatorChatProps) {
 	const [message, setMessage] = useState("");
 	const [isExpanded, setIsExpanded] = useState(false);
-	const messagesEndRef = useRef<HTMLDivElement>(null);
+	const scrollAreaRef = useRef<HTMLDivElement>(null);
+	const messageViewportRef = useRef<HTMLDivElement>(null);
+	const previousMessageCountRef = useRef(0);
 	const inputRef = useRef<HTMLInputElement>(null);
 
-	const messages = useQuery(api.chats.getRecentMessages, { 
-		gameId, 
-		limit: 100 
+	const messages = useQuery(api.chats.getRecentMessages, {
+		gameId,
+		limit: 100,
 	}) as ChatMessage[] | undefined;
 
 	const sendMessage = useMutation(api.chats.sendMessage);
 
-	const scrollToBottom = () => {
-		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-	};
+	const getViewport = useCallback(() => {
+		const viewport = scrollAreaRef.current?.querySelector(
+			"[data-radix-scroll-area-viewport]",
+		) as HTMLDivElement | null;
+		return viewport ?? messageViewportRef.current;
+	}, []);
+
+	const scrollToBottom = useCallback((behavior: ScrollBehavior = "auto") => {
+		const viewport = getViewport();
+		if (!viewport) return;
+		viewport.scrollTo({ top: viewport.scrollHeight, behavior });
+	}, [getViewport]);
 
 	useEffect(() => {
-		scrollToBottom();
-	}, [messages]);
+		const viewport = getViewport();
+		if (!viewport) return;
+		const messageCount = messages?.length ?? 0;
+		const isInitialLoad = previousMessageCountRef.current === 0 && messageCount > 0;
+		const distanceFromBottom =
+			viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+		const isNearBottom = distanceFromBottom <= 48;
+		if (isInitialLoad || isNearBottom) {
+			scrollToBottom(isInitialLoad ? "auto" : "smooth");
+		}
+		previousMessageCountRef.current = messageCount;
+	}, [getViewport, messages, scrollToBottom]);
+
+	useEffect(() => {
+		if (isExpanded) {
+			scrollToBottom();
+		}
+	}, [isExpanded, scrollToBottom]);
 
 	const handleSendMessage = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -124,8 +151,8 @@ export default function SpectatorChat({ gameId, className }: SpectatorChatProps)
 				</div>
 			</CardHeader>
 			<CardContent className="flex-1 flex flex-col p-0 min-h-0">
-				<ScrollArea className="flex-1 px-4 min-h-0">
-					<div className="space-y-3 pb-4">
+				<ScrollArea ref={scrollAreaRef} className="flex-1 px-4 min-h-0">
+					<div ref={messageViewportRef} className="space-y-3 pb-4">
 						{messages?.length === 0 ? (
 							<div className="text-center py-8 text-muted-foreground">
 								<MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -174,7 +201,6 @@ export default function SpectatorChat({ gameId, className }: SpectatorChatProps)
 								</div>
 							))
 						)}
-						<div ref={messagesEndRef} />
 					</div>
 				</ScrollArea>
 				<form onSubmit={handleSendMessage} className="p-4 border-t flex-shrink-0">

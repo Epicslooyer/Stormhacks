@@ -34,6 +34,12 @@ export function HomeHeader() {
 					aria-label="Primary"
 					className="hidden items-center gap-6 text-sm font-medium sm:flex"
 				>
+			<Link
+				className="text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+				href="/"
+			>
+				Problems
+			</Link>
 					<Link
 						className="text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
 						href="/lobby"
