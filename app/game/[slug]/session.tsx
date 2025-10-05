@@ -1,4 +1,3 @@
-
 "use client";
 import { useRouter } from "next/navigation";
 
@@ -1100,7 +1099,7 @@ export default function GameSession({ slug }: { slug: string }) {
 								)}
 							</div>
 						)}
-						{gameWinner && (
+						{gameWinner && false && (
 							<div className="rounded-xl border border-border bg-card p-4">
 								{gameWinner.isGameOver ? (
 									<div className="text-center">
