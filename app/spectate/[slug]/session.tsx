@@ -41,6 +41,7 @@ type SpectatorView = VisibleParticipant & {
 	cursorColumn: number | null;
 	isEliminated: boolean;
 	isWinner: boolean;
+	isLosing: boolean;
 	lastCodeUpdated: number | null;
 };
 
@@ -236,6 +237,10 @@ export default function SpectateSession({ slug }: { slug: string }) {
 		if (winnerInfo?.winner?.clientId) {
 			ids.add(winnerInfo.winner.clientId);
 		}
+		// When the game isn't over yet, highlight the current leader
+		if (!winnerInfo?.isGameOver && winnerInfo?.leader?.clientId) {
+			ids.add(winnerInfo.leader.clientId);
+		}
 		return ids;
 	}, [winnerInfo]);
 
@@ -252,6 +257,7 @@ export default function SpectateSession({ slug }: { slug: string }) {
 				: "Cursor: unavailable";
 			const cursorLine = cursor?.lineNumber ?? null;
 			const cursorColumn = cursor?.column ?? null;
+			const isWinner = winningClientIds.has(participant.clientId);
 			return {
 				...participant,
 				code,
@@ -260,7 +266,8 @@ export default function SpectateSession({ slug }: { slug: string }) {
 				cursorLine,
 				cursorColumn,
 				isEliminated: score?.isEliminated ?? false,
-				isWinner: winningClientIds.has(participant.clientId),
+				isWinner,
+				isLosing: !isWinner,
 				lastCodeUpdated,
 			};
 		});
@@ -286,6 +293,14 @@ export default function SpectateSession({ slug }: { slug: string }) {
 						height={64}
 						className="h-full w-full"
 					/>
+				</div>
+			)}
+			{/* Red ribbon for losing players (skip if eliminated to avoid clutter) */}
+			{view.isLosing && !view.isEliminated && (
+				<div className="pointer-events-none absolute left-[-34px] top-4 z-30 -rotate-45">
+					<span className="inline-block bg-red-600 px-6 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-lg">
+						Losing
+					</span>
 				</div>
 			)}
 			{view.isEliminated && (
