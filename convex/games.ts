@@ -138,6 +138,7 @@ export const getGame = query({
 			problemSlug: game.problemSlug ?? null,
 			problemTitle: game.problemTitle ?? null,
 			problemDifficulty: game.problemDifficulty ?? null,
+			mode: game.mode ?? null,
 			viewerId,
 		};
 	},
