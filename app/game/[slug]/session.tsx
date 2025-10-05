@@ -38,6 +38,17 @@ type TopicTag = {
 	slug?: string | null;
 };
 
+type Game = {
+	_id: any;
+	slug: string;
+	name: string;
+	status: "lobby" | "active" | "completed" | "countdown";
+	createdAt: number;
+	startedAt?: number;
+	timeLimit?: number;
+	mode?: "solo" | "multiplayer";
+};
+
 const REMOTE_CURSOR_STYLES = [
 	{ suffix: "0", border: "#ef4444", background: "rgba(239, 68, 68, 0.25)" },
 	{ suffix: "1", border: "#22c55e", background: "rgba(34, 197, 94, 0.25)" },
@@ -51,6 +62,7 @@ const REMOTE_CURSOR_STYLE_ELEMENT_ID = "remote-cursor-styles";
 
 export default function GameSession({ slug }: { slug: string }) {
 	const router = useRouter();
+	const [timeLeft, setTimeLeft] = useState<number | null>(null);
 	const {
 		game,
 		clientId,
@@ -125,6 +137,32 @@ export default function GameSession({ slug }: { slug: string }) {
 			gameTimer.start();
 		}
 	}, [countdownMs, gameStarted, gameTimer]);
+
+	// Timer logic
+	useEffect(() => {
+		const gameData = game as Game | undefined;
+		const startTime = gameData?.startedAt;
+		const limit = gameData?.timeLimit;
+		
+		if (!startTime || !limit) return;
+		
+		const updateTimer = () => {
+			const now = Date.now();
+			const endTime = startTime + limit;
+			const remaining = Math.max(0, endTime - now);
+			
+			setTimeLeft(remaining);
+			
+			if (remaining <= 0 && !submitted) {
+				// Time's up! Player will be eliminated
+				router.replace(`/game/${resolvedSlug}/ending`);
+			}
+		};
+		
+		updateTimer();
+		const interval = setInterval(updateTimer, 1000);
+		return () => clearInterval(interval);
+	}, [game, submitted, resolvedSlug, router]);
 
 	const handleEditorMount = useCallback(
 		(editorInstance: MonacoEditorNS.IStandaloneCodeEditor) => {
@@ -595,12 +633,12 @@ export default function GameSession({ slug }: { slug: string }) {
 						totalTestCases: summary.totalTests,
 						calculatedScore: scoring.calculatedScore,
 					});
-					
 					setSubmitted(true);
 					outputText += `\n✅ Score submitted successfully!`;
-					
 					// Check for elimination threshold
 					await checkEliminationThreshold({ slug: resolvedSlug });
+					// Always redirect to ending page after submit
+					router.replace(`/game/${resolvedSlug}/ending`);
 				} catch (error) {
 					console.error("Failed to submit score:", error);
 					outputText += `\n⚠️ Score submission failed, but your solution is correct!`;
@@ -702,11 +740,28 @@ export default function GameSession({ slug }: { slug: string }) {
 						</div>
 					</div>
 					<div className="flex flex-col items-end gap-2 text-sm text-muted-foreground">
-						<div className="flex flex-wrap items-center gap-3">
-							<span className="font-semibold text-primary">
-								Live participants: {presenceCount}
-							</span>
-							<span>You are connected as {clientId.slice(0, 8)}</span>
+						<div className="flex flex-wrap items-center justify-between gap-3">
+							<div>
+								<span className="font-semibold text-primary mr-3">
+									Live participants: {presenceCount}
+								</span>
+								<span>You are connected as {clientId.slice(0, 8)}</span>
+							</div>
+							{timeLeft !== null && (
+								<div className="flex flex-col items-end gap-1">
+									<div className="flex items-center gap-2 bg-card p-2 rounded-lg border border-border">
+										<span className="text-sm font-medium text-muted-foreground">Time Remaining:</span>
+										<span className={`font-mono text-xl font-bold tabular-nums ${timeLeft < 30000 ? 'text-red-500 animate-pulse' : 'text-green-500'}`}>
+											{Math.floor(timeLeft / 60000)}:{String(Math.floor((timeLeft % 60000) / 1000)).padStart(2, '0')}
+										</span>
+									</div>
+									{timeLeft < 30000 && (
+										<p className="text-sm text-red-500 font-medium animate-pulse">
+											⚠️ Time is running out! Submit your solution now!
+										</p>
+									)}
+								</div>
+							)}
 						</div>
 						{game?.status === "countdown" && countdownSeconds !== null && (
 							<p className="font-semibold text-foreground">
@@ -909,9 +964,9 @@ export default function GameSession({ slug }: { slug: string }) {
 						</div>
 					</div>
 				</div>
-				{game && (
+				{/* Only show sidebar content if game is not completed; otherwise, redirect will occur */}
+				{game && game.status !== "completed" && (
 					<div className="flex flex-col gap-4 lg:basis-[25%] lg:shrink-0">
-						{/* Leaderboard */}
 						{leaderboard && leaderboard.leaderboard.length > 0 && (
 							<div className="rounded-xl border border-border bg-card">
 								<div className="border-b border-border px-4 py-3">
@@ -958,8 +1013,6 @@ export default function GameSession({ slug }: { slug: string }) {
 								)}
 							</div>
 						)}
-						
-						{/* Game Status */}
 						{gameWinner && (
 							<div className="rounded-xl border border-border bg-card p-4">
 								{gameWinner.isGameOver ? (
@@ -988,7 +1041,6 @@ export default function GameSession({ slug }: { slug: string }) {
 								) : null}
 							</div>
 						)}
-						
 						<SpectatorChat gameId={game._id} />
 					</div>
 				)}

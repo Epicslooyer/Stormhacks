@@ -18,6 +18,8 @@ export const gameTables = {
 		problemSlug: v.optional(v.string()),
 		problemTitle: v.optional(v.string()),
 		problemDifficulty: v.optional(v.string()),
+		timeLimit: v.optional(v.number()), // Time limit in milliseconds
+		startedAt: v.optional(v.number()), // When the game actually started
 	})
 		.index("by_status", ["status"])
 		.index("by_slug", ["slug"])

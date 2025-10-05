@@ -28,6 +28,92 @@ export const getScoresForGame = query({
 			.sort((a, b) => (b.calculatedScore ?? 0) - (a.calculatedScore ?? 0));
 	},
 });
+// Helper function to get time limit based on difficulty
+function getTimeLimitForDifficulty(difficulty: string): number {
+    switch (difficulty.toLowerCase()) {
+        case 'easy':
+            return 2 * 60 * 1000; // 2 minutes in milliseconds
+        case 'medium':
+            return 4 * 60 * 1000; // 4 minutes
+        case 'hard':
+            return 6 * 60 * 1000; // 6 minutes
+        default:
+            return 4 * 60 * 1000; // Default to 4 minutes
+    }
+}
+
+export const eliminateTimeoutPlayers = mutation({
+    handler: async (ctx) => {
+        const now = Date.now();
+        // Find active games that have started
+        const activeGames = await ctx.db
+            .query("games")
+            .withIndex("by_status", (q) => q.eq("status", "active"))
+            .collect();
+
+        for (const game of activeGames) {
+            if (!game.startedAt || !game.timeLimit) continue;
+            
+            const timeoutTime = game.startedAt + game.timeLimit;
+            if (now >= timeoutTime) {
+                // Find players who haven't submitted
+                const scores = await ctx.db
+                    .query("gameScores")
+                    .withIndex("by_game", (q) => q.eq("gameId", game._id))
+                    .collect();
+
+                const presences = await ctx.db
+                    .query("gamePresences")
+                    .withIndex("by_game", (q) => q.eq("gameId", game._id))
+                    .collect();
+
+                // Get client IDs that haven't submitted
+                const submittedClientIds = new Set(scores.map(s => s.clientId));
+                const timeoutPlayers = presences.filter(p => !submittedClientIds.has(p.clientId));
+
+                // Eliminate players who haven't submitted
+                for (const player of timeoutPlayers) {
+                    await ctx.db.insert("gameScores", {
+                        gameId: game._id,
+                        clientId: player.clientId,
+                        userId: player.userId,
+                        playerName: `Player ${player.clientId.slice(0, 8)}`,
+                        score: 0,
+                        calculatedScore: 0,
+                        submittedAt: now,
+                        isEliminated: true,
+                        eliminatedAt: now
+                    });
+                }
+            }
+        }
+    },
+});
+
+export const startGame = mutation({
+    args: {
+        slug: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const game = await getGameBySlug(ctx.db, args.slug);
+        if (!game) throw new Error("Game not found");
+        
+        const now = Date.now();
+        const timeLimit = getTimeLimitForDifficulty(game.problemDifficulty || "medium");
+        
+        await ctx.db.patch(game._id, {
+            status: "active",
+            startedAt: now,
+            timeLimit
+        });
+        
+        // Note: In production, you'd want to use a proper scheduler system
+        // For now, we'll rely on client-side timer
+        
+        return { timeLimit };
+    },
+});
+
 export const submitScore = mutation({
 	args: {
 		slug: v.string(),
