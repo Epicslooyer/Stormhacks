@@ -38,6 +38,7 @@ export const gameTables = {
 		clientId: v.string(),
 		userId: v.optional(v.id("users")),
 		updatedAt: v.number(),
+		isReady: v.optional(v.boolean()),
 	})
 		.index("by_game", ["gameId", "updatedAt"])
 		.index("by_game_client", ["gameId", "clientId"]),
