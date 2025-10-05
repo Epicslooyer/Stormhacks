@@ -17,6 +17,7 @@
         "fuse.js": "^7.1.0",
         "leetcode-query": "^2.0.1",
         "next": "15.5.4",
+        "piston-client": "^1.0.2",
         "next-themes": "^0.4.6",
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
@@ -779,6 +780,8 @@
     "pidtree": ["pidtree@0.3.1", "", { "bin": { "pidtree": "bin/pidtree.js" } }, "sha512-qQbW94hLHEqCg7nhby4yRC7G2+jYHY4Rguc2bjw7Uug4GIJuu1tvf2uHaZv5Q8zdt+WKJ6qK1FOI6amaWUo5FA=="],
 
     "pify": ["pify@3.0.0", "", {}, "sha512-C3FsVNH1udSEX48gGX1xfvwTWfsYWj5U+8/uK15BGzIGrKoUpghX8hWZwa/OFnakBiiVNmBvemTJR5mcy7iPcg=="],
+
+    "piston-client": ["piston-client@1.0.2", "", { "dependencies": { "node-fetch": "^2.6.1" } }, "sha512-kQreSVVYTk0SFIYm1nCIKQtiodPCAxPjwAvZyWKkW3fMFbn7HONyYWIPoGVx2xXf5SFD29CbgSRCN3k+LP7mCg=="],
 
     "possible-typed-array-names": ["possible-typed-array-names@1.1.0", "", {}, "sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg=="],
 

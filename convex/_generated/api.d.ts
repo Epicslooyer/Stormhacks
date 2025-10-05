@@ -19,6 +19,7 @@ import type * as emailProvider from "../emailProvider.js";
 import type * as games from "../games.js";
 import type * as http from "../http.js";
 import type * as myFunctions from "../myFunctions.js";
+import type * as problems from "../problems.js";
 import type * as round from "../round.js";
 
 /**
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   games: typeof games;
   http: typeof http;
   myFunctions: typeof myFunctions;
+  problems: typeof problems;
   round: typeof round;
 }>;
 export declare const api: FilterApi<

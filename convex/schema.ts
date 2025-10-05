@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { chatTables } from "./chats/schema";
 import { gameTables } from "./games/schema";
 import { playerTables } from "./players/schema";
+import { problemTables } from "./problems/schema";
 import { roundTables } from "./round/schema";
 
 // The schema is normally optional, but Convex Auth
@@ -14,6 +15,7 @@ export default defineSchema({
 	...chatTables,
 	...gameTables,
 	...playerTables,
+	...problemTables,
 	...roundTables,
 	numbers: defineTable({
 		value: v.number(),
