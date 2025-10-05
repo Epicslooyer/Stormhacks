@@ -13,11 +13,35 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+
+type VisibleParticipant = {
+	key: string;
+	label: string;
+	lastSeen: number;
+	isGuest: boolean;
+	clientId: string;
+};
+
+type SpectatorView = VisibleParticipant & {
+	placeholderCode: string;
+	cursorLabel: string;
+	isEliminated: boolean;
+};
 
 export default function SpectateSession({ slug }: { slug: string }) {
 	const game = useQuery(api.games.getGame, { slug });
 	const presence = useQuery(api.games.activePresence, { slug });
 	const [countdownMs, setCountdownMs] = useState<number | null>(null);
+	const [selectedView, setSelectedView] = useState<SpectatorView | null>(null);
+	const [viewerOpen, setViewerOpen] = useState(false);
+	const [fullscreenOpen, setFullscreenOpen] = useState(false);
 
 	const status = game?.status ?? null;
 	const presenceCount = presence?.count ?? 0;
@@ -43,7 +67,7 @@ export default function SpectateSession({ slug }: { slug: string }) {
 	const countdownSeconds =
 		countdownMs === null ? null : Math.ceil(countdownMs / 1000);
 
-	const visibleParticipants = useMemo(() => {
+	const visibleParticipants = useMemo<VisibleParticipant[]>(() => {
 		return participants.map((presence) => {
 			const isGuest = presence.userId === null;
 			const baseLabel = isGuest
@@ -54,9 +78,30 @@ export default function SpectateSession({ slug }: { slug: string }) {
 				label: baseLabel,
 				lastSeen: presence.lastSeen,
 				isGuest,
+				clientId: presence.clientId,
 			};
 		});
 	}, [participants]);
+
+	const eliminatedParticipants = useMemo<VisibleParticipant[]>(() => {
+		return [];
+	}, []);
+
+	const eliminatedSet = useMemo(() => {
+		return new Set(eliminatedParticipants.map((participant) => participant.key));
+	}, [eliminatedParticipants]);
+
+	const spectatorViews = useMemo<SpectatorView[]>(() => {
+		return visibleParticipants.map((participant) => {
+			const placeholderCode = `// ${participant.label}\n// Live code streaming will appear here.\n\nfunction solution() {\n\t// Implementation coming soon...\n}`;
+			return {
+				...participant,
+				placeholderCode,
+				cursorLabel: "Cursor: unavailable",
+				isEliminated: eliminatedSet.has(participant.key),
+			};
+		});
+	}, [eliminatedSet, visibleParticipants]);
 
 	const countdownActive = status === "countdown" && countdownSeconds !== null;
 	const statusLabelMap: Record<string, string> = {
@@ -170,6 +215,76 @@ export default function SpectateSession({ slug }: { slug: string }) {
 						</CardContent>
 					</Card>
 				)}
+				<Card>
+					<CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+						<CardTitle className="text-xl font-semibold">
+							Live code preview
+						</CardTitle>
+						<CardDescription>
+							Click a player to open a detailed view with an enlarged code block.
+						</CardDescription>
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							onClick={() => setFullscreenOpen(true)}
+							className="mt-2 w-full sm:mt-0 sm:w-auto"
+						>
+							Enter fullscreen
+						</Button>
+					</CardHeader>
+					<CardContent>
+						{spectatorViews.length === 0 ? (
+							<div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/40 p-6 text-center text-sm text-muted-foreground">
+								No live players to display yet.
+							</div>
+						) : (
+							<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+								{spectatorViews.map((participant) => (
+									<button
+										type="button"
+										key={participant.key}
+										onClick={() => {
+											setSelectedView(participant);
+											setViewerOpen(true);
+										}}
+										className="relative flex flex-col justify-between overflow-hidden rounded-lg border border-border bg-card/80 p-4 text-left shadow-sm transition hover:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2"
+									>
+										<div className="flex items-center justify-between gap-3">
+											<div>
+												<p className="text-base font-semibold text-foreground">
+													{participant.label}
+												</p>
+												<span className="text-xs uppercase tracking-wide text-muted-foreground">
+													{participant.isGuest ? "Guest" : "Registered"}
+												</span>
+											</div>
+											<Badge variant="outline" className="font-mono text-[0.65rem]">
+												{participant.clientId.slice(0, 6)}
+											</Badge>
+										</div>
+										<pre className="mt-4 max-h-44 overflow-auto rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+											<code>{participant.placeholderCode}</code>
+										</pre>
+										<div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+											<span>{participant.cursorLabel}</span>
+											<span>
+												Last seen: {new Date(participant.lastSeen).toLocaleTimeString()}
+											</span>
+										</div>
+										{participant.isEliminated && (
+											<span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-red-500/10">
+												<span className="text-6xl font-black leading-none text-red-500 drop-shadow-lg">
+													×
+												</span>
+											</span>
+										)}
+									</button>
+								))}
+							</div>
+						)}
+					</CardContent>
+				</Card>
 				<div className="grid gap-6 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)]">
 					<Card className="self-start">
 						<CardHeader>
@@ -274,9 +389,160 @@ export default function SpectateSession({ slug }: { slug: string }) {
 								</Link>
 							</CardContent>
 						</Card>
+						<Card>
+							<CardHeader>
+								<CardTitle className="text-lg">Eliminated players</CardTitle>
+								<CardDescription>
+									Players who are no longer active in this match.
+								</CardDescription>
+							</CardHeader>
+							<CardContent>
+								{eliminatedParticipants.length === 0 ? (
+									<p className="text-sm text-muted-foreground">
+										No eliminated players yet.
+									</p>
+								) : (
+									<div className="space-y-3">
+										{eliminatedParticipants.map((player) => (
+											<div
+												key={`eliminated-${player.key}`}
+												className="flex items-center justify-between rounded-lg border border-border bg-muted/40 p-3"
+											>
+												<span className="text-sm font-medium text-foreground">
+													{player.label}
+												</span>
+												<Badge variant="secondary">Eliminated</Badge>
+											</div>
+										))}
+									</div>
+								)}
+							</CardContent>
+						</Card>
 					</div>
 				</div>
 			</div>
+			<Dialog
+				open={viewerOpen}
+				onOpenChange={(open) => {
+					setViewerOpen(open);
+					if (!open) {
+						setSelectedView(null);
+					}
+				}}
+			>
+				<DialogContent className="relative sm:max-w-4xl">
+					<DialogHeader>
+						<DialogTitle>
+							{selectedView?.label ?? "Participant"}
+						</DialogTitle>
+						<DialogDescription>
+							Expanded view of the selected player&apos;s workspace.
+						</DialogDescription>
+					</DialogHeader>
+					{selectedView ? (
+						<div className="relative space-y-4">
+							<div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+								<Badge variant="outline" className="font-mono text-xs">
+									{selectedView.clientId.slice(0, 12)}
+								</Badge>
+								<span>{selectedView.isGuest ? "Guest player" : "Registered player"}</span>
+								<span>{selectedView.cursorLabel}</span>
+								<span>
+									Last seen at {new Date(selectedView.lastSeen).toLocaleTimeString()}
+								</span>
+							</div>
+							<pre className="max-h-[60vh] overflow-auto rounded-md bg-muted px-4 py-3 text-sm leading-relaxed text-foreground">
+								<code>{selectedView.placeholderCode}</code>
+							</pre>
+							{selectedView.isEliminated && (
+								<span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-red-500/10">
+									<span className="text-[12rem] font-black leading-none text-red-500/80 drop-shadow-lg">
+										×
+									</span>
+								</span>
+							)}
+						</div>
+					) : (
+						<p className="text-sm text-muted-foreground">
+							Select a participant to view their workspace.
+						</p>
+					)}
+				</DialogContent>
+			</Dialog>
+			<Dialog open={fullscreenOpen} onOpenChange={setFullscreenOpen}>
+				<DialogContent
+					showCloseButton={false}
+					className="left-0 top-0 h-screen max-h-screen w-screen max-w-screen translate-x-0 translate-y-0 rounded-none border-0 bg-background/95 p-6 sm:p-10"
+				>
+					<DialogHeader className="sr-only">
+						<DialogTitle>Spectator fullscreen grid</DialogTitle>
+					</DialogHeader>
+					<div className="flex h-full flex-col gap-6">
+						<div className="flex flex-wrap items-center justify-between gap-4">
+							<div className="space-y-1">
+								<h2 className="text-2xl font-semibold">Spectator wall</h2>
+								<p className="text-sm text-muted-foreground">
+									Projected grid view of all {spectatorViews.length} participants.
+								</p>
+							</div>
+							<Button type="button" variant="outline" onClick={() => setFullscreenOpen(false)}>
+								Exit fullscreen
+							</Button>
+						</div>
+						<div className="flex-1 overflow-hidden rounded-lg border border-border bg-card/60 p-4">
+							{spectatorViews.length === 0 ? (
+								<div className="flex h-full items-center justify-center text-lg text-muted-foreground">
+									No live participants available.
+								</div>
+							) : (
+								<div className="grid h-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+									{spectatorViews.map((participant) => (
+										<button
+											type="button"
+											key={`fullscreen-${participant.key}`}
+											onClick={() => {
+												setSelectedView(participant);
+												setViewerOpen(true);
+											}}
+											className="relative flex h-full flex-col justify-between overflow-hidden rounded-lg border border-border bg-background/90 p-4 text-left shadow transition hover:border-primary focus:outline-hidden focus:ring-4 focus:ring-primary/40"
+										>
+											<div className="flex items-center justify-between gap-3">
+												<div>
+													<p className="text-lg font-semibold text-foreground">
+														{participant.label}
+													</p>
+													<span className="text-xs uppercase tracking-wide text-muted-foreground">
+														{participant.isGuest ? "Guest" : "Registered"}
+													</span>
+												</div>
+												<Badge variant={participant.isEliminated ? "destructive" : "outline"} className="font-mono text-[0.65rem]">
+													{participant.clientId.slice(0, 8)}
+												</Badge>
+											</div>
+											<pre className="mt-4 flex-1 overflow-auto rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+												<code>{participant.placeholderCode}</code>
+											</pre>
+											<div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+												<span>{participant.cursorLabel}</span>
+												<span>
+													Seen {new Date(participant.lastSeen).toLocaleTimeString()}
+												</span>
+											</div>
+											{participant.isEliminated && (
+												<span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-red-500/15">
+													<span className="text-[18vmin] font-black leading-none text-red-500 drop-shadow-2xl">
+														×
+													</span>
+												</span>
+											)}
+										</button>
+									))}
+								</div>
+							)}
+						</div>
+					</div>
+				</DialogContent>
+			</Dialog>
 		</main>
 	);
 }
