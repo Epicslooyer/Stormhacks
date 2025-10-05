@@ -88,6 +88,7 @@ export function useGameConnection(initialSlug: string, basePath: string) {
 		slug,
 		clientId,
 		presenceCount: presence?.count ?? 0,
+		readyCount: presence?.readyCount ?? 0,
 		participants: presence?.participants ?? [],
 		game,
 		countdownMs,

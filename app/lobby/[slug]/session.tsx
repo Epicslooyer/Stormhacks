@@ -6,12 +6,16 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useGameConnection } from "@/components/useGameConnection";
 import { api } from "@/convex/_generated/api";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 export default function LobbySession({ slug }: { slug: string }) {
 	const router = useRouter();
 	const {
 		game,
 		presenceCount,
+		readyCount,
 		clientId,
 		slug: resolvedSlug,
 		participants,
@@ -19,8 +23,10 @@ export default function LobbySession({ slug }: { slug: string }) {
 		viewerId,
 	} = useGameConnection(slug, "/lobby");
 	const beginCountdown = useMutation(api.games.beginCountdown);
+	const toggleReadiness = useMutation(api.games.toggleReadiness);
 	const [pending, setPending] = useState(false);
 	const [copied, setCopied] = useState(false);
+	const [readyPending, setReadyPending] = useState(false);
 
 	const status = game?.status ?? "lobby";
 	const countdownSeconds =
@@ -29,23 +35,29 @@ export default function LobbySession({ slug }: { slug: string }) {
 		game?.createdBy !== undefined &&
 		viewerId !== null &&
 		game.createdBy === viewerId;
-	const canStart = status === "lobby" && isOwner;
+	const canStart = status === "lobby" && isOwner && presenceCount >= 2 && readyCount >= 2;
 	const countdownActive = status === "countdown" && countdownSeconds !== null;
 	const problemTitle = game?.problemTitle ?? game?.name ?? resolvedSlug;
 	const problemDifficulty = game?.problemDifficulty ?? null;
+	
 	const visibleParticipants = useMemo(() => {
 		return participants.map((presence) => {
 			const isGuest = presence.userId === null;
 			const baseLabel = isGuest
-				? presence.clientId.slice(0, 8)
-				: String(presence.userId).slice(0, 8);
+				? `Player ${presence.clientId.slice(0, 6)}`
+				: `User ${String(presence.userId).slice(0, 6)}`;
 			return {
 				key: isGuest ? `anon-${presence.clientId}` : String(presence.userId),
 				label: baseLabel,
 				isGuest,
+				clientId: presence.clientId,
+				isReady: presence.isReady ?? false,
 			};
 		});
 	}, [participants]);
+
+	const currentPlayer = visibleParticipants.find(p => p.clientId === clientId);
+	const isCurrentPlayerReady = currentPlayer?.isReady ?? false;
 
 	useEffect(() => {
 		if (status === "active") {
@@ -54,104 +66,234 @@ export default function LobbySession({ slug }: { slug: string }) {
 	}, [resolvedSlug, router, status]);
 
 	return (
-		<main className="p-8 flex flex-col gap-6 max-w-3xl mx-auto">
-			<header className="flex flex-col gap-1 text-center">
-				<h1 className="text-3xl font-bold">
-					Lobby {game?.name ?? resolvedSlug}
-				</h1>
-				<p className="text-sm text-slate-600 dark:text-slate-400">
-					Status: {status}
-				</p>
-				<p className="text-sm text-slate-500 dark:text-slate-400">
-					Problem: {problemTitle}
-					{problemDifficulty ? ` · ${problemDifficulty}` : ""}
-				</p>
-			</header>
-			<section className="flex flex-col items-center gap-2">
-				<span className="text-lg font-semibold">
-					Connected users: {presenceCount}
-				</span>
-				<p className="text-xs text-slate-500 dark:text-slate-400">
-					You are connected as {clientId.slice(0, 8)}
-				</p>
+		<main className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4">
+			<div className="max-w-4xl mx-auto space-y-6">
+				{/* Header */}
+				<header className="text-center space-y-4 pt-8">
+					<div className="space-y-2">
+						<h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+							{game?.name ?? `Lobby ${resolvedSlug}`}
+						</h1>
+						<div className="flex items-center justify-center gap-2">
+							<Badge variant={status === "lobby" ? "secondary" : status === "countdown" ? "default" : "outline"}>
+								{status === "lobby" ? "Waiting for players" : 
+								 status === "countdown" ? "Starting soon" : 
+								 status === "active" ? "Game in progress" : "Completed"}
+							</Badge>
+							{problemDifficulty && (
+								<Badge variant="outline" className="capitalize">
+									{problemDifficulty}
+								</Badge>
+							)}
+						</div>
+					</div>
+					<p className="text-muted-foreground max-w-2xl mx-auto">
+						{problemTitle}
+					</p>
+				</header>
+
+				{/* Countdown */}
 				{countdownActive && countdownSeconds !== null && (
-					<p className="text-sm font-semibold text-foreground">
-						Game starting in {countdownSeconds}s
-					</p>
+					<Card className="border-primary/20 bg-primary/5">
+						<CardContent className="pt-6">
+							<div className="text-center space-y-2">
+								<div className="text-6xl font-bold text-primary animate-pulse">
+									{countdownSeconds}
+								</div>
+								<p className="text-lg font-medium">Game starting in...</p>
+							</div>
+						</CardContent>
+					</Card>
 				)}
-			</section>
-			<section className="flex flex-col items-center gap-3">
-				<div className="w-full max-w-md border border-slate-200 dark:border-slate-800 rounded-md p-3">
-					<h2 className="text-sm font-semibold mb-2">Currently connected</h2>
-					{visibleParticipants.length === 0 ? (
-						<p className="text-xs text-slate-500 dark:text-slate-400">
-							Waiting for players to join…
-						</p>
-					) : (
-						<ul className="flex flex-col gap-1 text-sm">
-							{visibleParticipants.map((player) => (
-								<li
-									key={player.key}
-									className="flex items-center justify-between rounded bg-slate-200/60 dark:bg-slate-800/60 px-2 py-1"
+
+				{/* Main Content */}
+				<div className="grid md:grid-cols-2 gap-6">
+					{/* Players Section */}
+					<Card className="h-fit">
+						<CardHeader>
+							<CardTitle className="flex items-center gap-2">
+								<div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+								Players ({presenceCount}/2) - Ready ({readyCount}/2)
+							</CardTitle>
+						</CardHeader>
+						<CardContent className="space-y-3">
+							{visibleParticipants.length === 0 ? (
+								<div className="text-center py-8 text-muted-foreground">
+									<div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+										<svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+										</svg>
+									</div>
+									<p>Waiting for players to join...</p>
+								</div>
+							) : (
+								<div className="space-y-3">
+									{visibleParticipants.map((player, index) => (
+										<div
+											key={player.key}
+											className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border"
+										>
+											<div className="flex items-center gap-3">
+												<div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
+													{index + 1}
+												</div>
+												<div>
+													<p className="font-medium">{player.label}</p>
+													{player.isGuest && (
+														<Badge variant="outline" className="text-xs">
+															Guest
+														</Badge>
+													)}
+												</div>
+											</div>
+											<div className="flex items-center gap-2">
+												{player.isReady ? (
+													<>
+														<div className="w-2 h-2 bg-green-500 rounded-full"></div>
+														<span className="text-sm text-green-600 dark:text-green-400">Ready</span>
+													</>
+												) : (
+													<>
+														<div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+														<span className="text-sm text-orange-600 dark:text-orange-400">Not Ready</span>
+													</>
+												)}
+											</div>
+										</div>
+									))}
+									
+									{/* Empty slots for remaining players */}
+									{Array.from({ length: 2 - visibleParticipants.length }).map((_, index) => (
+										<div
+											key={`empty-${index}`}
+											className="flex items-center justify-between p-3 rounded-lg border-2 border-dashed border-muted-foreground/30"
+										>
+											<div className="flex items-center gap-3">
+												<div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground">
+													{visibleParticipants.length + index + 1}
+												</div>
+												<div>
+													<p className="font-medium text-muted-foreground">Waiting for player...</p>
+												</div>
+											</div>
+											<div className="flex items-center gap-2">
+												<div className="w-2 h-2 bg-muted-foreground/30 rounded-full"></div>
+												<span className="text-sm text-muted-foreground">Not ready</span>
+											</div>
+										</div>
+									))}
+								</div>
+							)}
+						</CardContent>
+					</Card>
+
+					{/* Game Info & Actions */}
+					<Card className="h-fit">
+						<CardHeader>
+							<CardTitle>Game Settings</CardTitle>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							<div className="space-y-2">
+								<h3 className="font-medium">Lobby Code</h3>
+								<div className="flex items-center gap-2">
+									<code className="flex-1 px-3 py-2 bg-muted rounded-md font-mono text-sm">
+										{resolvedSlug}
+									</code>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={async () => {
+											if (typeof window === "undefined") return;
+											const shareUrl = `${window.location.origin}/lobby/${resolvedSlug}`;
+											try {
+												await navigator.clipboard.writeText(shareUrl);
+												setCopied(true);
+												setTimeout(() => setCopied(false), 2000);
+											} catch (error) {
+												console.error("Failed to copy lobby link", error);
+											}
+										}}
+									>
+										{copied ? "Copied!" : "Copy Link"}
+									</Button>
+								</div>
+							</div>
+
+							<div className="space-y-2">
+								<h3 className="font-medium">Your Connection</h3>
+								<div className="flex items-center gap-2 text-sm text-muted-foreground">
+									<div className="w-2 h-2 bg-green-500 rounded-full"></div>
+									Connected as {clientId.slice(0, 8)}
+								</div>
+							</div>
+
+							<div className="pt-4 space-y-3">
+								{/* Ready Button */}
+								<Button
+									className="w-full"
+									variant={isCurrentPlayerReady ? "secondary" : "default"}
+									disabled={readyPending || status !== "lobby"}
+									onClick={async () => {
+										if (readyPending || status !== "lobby") return;
+										setReadyPending(true);
+										try {
+											await toggleReadiness({ slug: resolvedSlug, clientId });
+										} finally {
+											setReadyPending(false);
+										}
+									}}
 								>
-									<span>{player.label}</span>
-									{player.isGuest && (
-										<span className="text-[10px] uppercase tracking-wide text-slate-500">
-											Guest
-										</span>
-									)}
-								</li>
-							))}
-						</ul>
-					)}
+									{readyPending ? "Updating..." : 
+									 isCurrentPlayerReady ? "Unready" : "Ready Up"}
+								</Button>
+
+								{/* Start Game Button */}
+								{isOwner ? (
+									<Button
+										className="w-full"
+										size="lg"
+										disabled={!canStart || pending}
+										onClick={async () => {
+											if (!canStart || pending) return;
+											setPending(true);
+											try {
+												await beginCountdown({ slug: resolvedSlug, durationMs: 5000 });
+											} finally {
+												setPending(false);
+											}
+										}}
+									>
+										{pending ? "Starting..." : 
+										 presenceCount < 2 ? "Waiting for players..." : 
+										 readyCount < 2 ? "Waiting for ready..." :
+										 "Start Game"}
+									</Button>
+								) : (
+									<div className="text-center space-y-2">
+										<Button variant="outline" className="w-full" disabled>
+											Waiting for host to start...
+										</Button>
+										<p className="text-sm text-muted-foreground">
+											Only the lobby creator can start the game
+										</p>
+									</div>
+								)}
+
+								<Link href={`/game/${resolvedSlug}`}>
+									<Button variant="ghost" className="w-full">
+										View Game Page
+									</Button>
+								</Link>
+							</div>
+						</CardContent>
+					</Card>
 				</div>
-				<button
-					type="button"
-					className="bg-slate-200 dark:bg-slate-800 text-foreground px-3 py-1 rounded-md"
-					onClick={async () => {
-						if (typeof window === "undefined") return;
-						const shareUrl = `${window.location.origin}/lobby/${resolvedSlug}`;
-						try {
-							await navigator.clipboard.writeText(shareUrl);
-							setCopied(true);
-							setTimeout(() => setCopied(false), 2000);
-						} catch (error) {
-							console.error("Failed to copy lobby link", error);
-						}
-					}}
-				>
-					{copied ? "Copied!" : "Share lobby link"}
-				</button>
-				{isOwner && (
-					<button
-						type="button"
-						className="bg-foreground text-background px-4 py-2 rounded-md disabled:opacity-50"
-						disabled={!canStart || pending}
-						onClick={async () => {
-							if (!canStart || pending) return;
-							setPending(true);
-							try {
-								await beginCountdown({ slug: resolvedSlug, durationMs: 5000 });
-							} finally {
-								setPending(false);
-							}
-						}}
-					>
-						{pending ? "Starting..." : "Start game"}
-					</button>
-				)}
-				{!isOwner && status === "lobby" && (
-					<p className="text-xs text-slate-500 dark:text-slate-400">
-						Waiting for the host to start the game…
-					</p>
-				)}
-				<Link
-					href={`/game/${resolvedSlug}`}
-					className="text-sm underline hover:no-underline text-foreground"
-				>
-					Open game page
-				</Link>
-			</section>
+
+				{/* Footer */}
+				<div className="text-center text-sm text-muted-foreground pb-8">
+					<p>Share the lobby link with your friend to start playing together!</p>
+				</div>
+			</div>
 		</main>
 	);
 }

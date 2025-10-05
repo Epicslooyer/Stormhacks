@@ -92,6 +92,24 @@ export const beginCountdown = mutation({
 		if (ownerId !== userId) {
 			throw new Error("Only the game owner can start the game");
 		}
+		
+		// Check if all players are ready
+		const cutoff = Date.now() - PRESENCE_TTL;
+		const presences = await ctx.db
+			.query("gamePresences")
+			.withIndex("by_game", (q) => q.eq("gameId", game._id))
+			.collect();
+		const activePresences = presences.filter((presence) => presence.updatedAt >= cutoff);
+		
+		if (activePresences.length < 2) {
+			throw new Error("Need at least 2 players to start the game");
+		}
+		
+		const readyCount = activePresences.filter((presence) => presence.isReady === true).length;
+		if (readyCount < activePresences.length) {
+			throw new Error("All players must be ready to start the game");
+		}
+		
 		const countdownDuration = args.durationMs ?? 5000;
 		const countdownEndsAt = Date.now() + countdownDuration;
 		await ctx.db.patch(game._id, {
@@ -163,9 +181,42 @@ export const heartbeatPresence = mutation({
 			clientId: args.clientId,
 			userId: userId ?? undefined,
 			updatedAt: now,
+			isReady: false,
 		});
 
 		return { updated: false };
+	},
+});
+
+export const toggleReadiness = mutation({
+	args: {
+		slug: v.string(),
+		clientId: v.string(),
+	},
+	handler: async (ctx, args) => {
+		const game = await getGameBySlug(ctx.db, args.slug);
+		if (!game) {
+			throw new Error("Game not found");
+		}
+		if (game.status !== "lobby") {
+			throw new Error("Can only toggle readiness in lobby");
+		}
+		const userId = await getAuthUserId(ctx);
+		const existing = await ctx.db
+			.query("gamePresences")
+			.withIndex("by_game_client", (q) =>
+				q.eq("gameId", game._id).eq("clientId", args.clientId),
+			)
+			.unique();
+		if (!existing) {
+			throw new Error("Player not found in game");
+		}
+		const newReadyState = !existing.isReady;
+		await ctx.db.patch(existing._id, {
+			isReady: newReadyState,
+			userId: userId ?? undefined,
+		});
+		return { isReady: newReadyState };
 	},
 });
 
@@ -254,7 +305,7 @@ export const activePresence = query({
 	handler: async (ctx, args) => {
 		const game = await getGameBySlug(ctx.db, args.slug);
 		if (!game) {
-			return { count: 0, participants: [] };
+			return { count: 0, participants: [], readyCount: 0 };
 		}
 		const cutoff = Date.now() - PRESENCE_TTL;
 		const presences = await ctx.db
@@ -262,12 +313,15 @@ export const activePresence = query({
 			.withIndex("by_game", (q) => q.eq("gameId", game._id))
 			.collect();
 		const active = presences.filter((presence) => presence.updatedAt >= cutoff);
+		const readyCount = active.filter((presence) => presence.isReady === true).length;
 		return {
 			count: active.length,
+			readyCount,
 			participants: active.map((presence) => ({
 				clientId: presence.clientId,
 				userId: presence.userId ?? null,
 				lastSeen: presence.updatedAt,
+				isReady: presence.isReady ?? false,
 			})),
 		};
 	},
