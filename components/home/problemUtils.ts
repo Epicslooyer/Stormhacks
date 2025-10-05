@@ -21,6 +21,24 @@ export const featuredProblems: ProblemOption[] = [
 		title: "Longest Substring Without Repeating Characters",
 		difficulty: "Medium",
 	},
+	{
+		id: "6",
+		slug: "product-of-array-except-self",
+		title: "Product of Array Except Self",
+		difficulty: "Medium",
+	},
+	{
+		id: "7",
+		slug: "lru-cache",
+		title: "LRU Cache",
+		difficulty: "Hard",
+	},
+	{
+		id: "8",
+		slug: "number-of-islands",
+		title: "Number of Islands",
+		difficulty: "Medium",
+	},
 ];
 
 export function normalizeProblem(problem: Record<string, unknown>): ProblemOption {

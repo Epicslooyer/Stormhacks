@@ -15,7 +15,6 @@ const isProtectedRoute = createRouteMatcher([
 	"/server",
 	"/game",
 	"/lobby",
-	"/problems",
 ]);
 
 export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {

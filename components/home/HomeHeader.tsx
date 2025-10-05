@@ -5,6 +5,7 @@ import { useConvexAuth } from "convex/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { ColorModeButton } from "@/components/ui/color-mode";
 
 export function HomeHeader() {
 	return (
@@ -22,12 +23,6 @@ export function HomeHeader() {
 				>
 					<Link
 						className="text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-						href="/problems"
-					>
-						Problems
-					</Link>
-					<Link
-						className="text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
 						href="/lobby"
 					>
 						Lobbies
@@ -39,7 +34,10 @@ export function HomeHeader() {
 						Spectate
 					</Link>
 				</nav>
-				<SignOutButton />
+				<div className="flex items-center gap-2">
+					<ColorModeButton className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white" />
+					<SignOutButton />
+				</div>
 			</div>
 		</header>
 	);
