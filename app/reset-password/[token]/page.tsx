@@ -17,10 +17,20 @@ export default function ResetPasswordForm() {
 	const validateToken = useMutation(api.authHelpers.validatePasswordResetToken);
 
 	useEffect(() => {
-		if (params.token) {
-			setToken(params.token as string);
+		const tokenParam = params?.token;
+		if (!tokenParam) {
+			return;
 		}
-	}, [params.token]);
+
+		if (typeof tokenParam === "string") {
+			setToken(tokenParam);
+			return;
+		}
+
+		if (Array.isArray(tokenParam) && tokenParam[0]) {
+			setToken(tokenParam[0]);
+		}
+	}, [params]);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();

@@ -22,6 +22,10 @@ export default function VerifyEmail() {
 	const _userStatus = useQuery(api.authHelpers.getUserVerificationStatus);
 
 	useEffect(() => {
+		if (!searchParams) {
+			return;
+		}
+
 		const emailParam = searchParams.get("email");
 		const tokenParam = searchParams.get("token");
 

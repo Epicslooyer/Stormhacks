@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import Image from "next/image";
 import Link from "next/link";
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api } from "@/convex/_generated/api";
@@ -39,8 +40,42 @@ type SpectatorView = VisibleParticipant & {
 	cursorLine: number | null;
 	cursorColumn: number | null;
 	isEliminated: boolean;
+	isWinner: boolean;
 	lastCodeUpdated: number | null;
 };
+
+type GameScore = {
+	clientId: string;
+	playerName: string;
+	userId: string | null;
+	score: number;
+	calculatedScore: number;
+	completionTime: number;
+	oNotation: string | null;
+	testCasesPassed: number;
+	totalTestCases: number;
+	submittedAt: number;
+	isEliminated: boolean;
+	eliminatedAt: number | null;
+};
+
+type WinnerInfo =
+	| {
+		winner: {
+			clientId: string;
+			playerName: string;
+		};
+		isGameOver: true;
+	}
+	| {
+		leader?: {
+			clientId: string;
+			playerName: string;
+		};
+		winner?: undefined;
+		isGameOver: false;
+	}
+	| undefined;
 
 export default function SpectateSession({ slug }: { slug: string }) {
 	const game = useQuery(api.games.getGame, { slug });
@@ -48,6 +83,7 @@ export default function SpectateSession({ slug }: { slug: string }) {
 	const cursorPositions = useQuery(api.games.activeCursorPositions, { slug });
 	const codeSnapshots = useQuery(api.games.activeCodeSnapshots, { slug });
 	const scores = useQuery(api.games.getScoresForGame, { slug });
+	const winnerInfo = useQuery(api.games.getGameWinner, { slug }) as WinnerInfo;
 	const [countdownMs, setCountdownMs] = useState<number | null>(null);
 	const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 	const [viewerOpen, setViewerOpen] = useState(false);
@@ -173,26 +209,41 @@ export default function SpectateSession({ slug }: { slug: string }) {
 		return map;
 	}, [codeSnapshots]);
 
-	const eliminatedParticipants = useMemo<VisibleParticipant[]>(() => {
-		if (!scores || scores.length === 0) return [];
-		
-		return scores.map((score) => ({
-			key: `completed-${score.clientId}`,
-			label: score.playerName,
-			lastSeen: score.submittedAt,
-			isGuest: score.userId === null,
-			clientId: score.clientId,
+	const normalizedScores = useMemo<GameScore[]>(() => {
+		if (!scores) return [];
+		return (scores as GameScore[]).map((score) => ({
+			...score,
+			score: score.score ?? 0,
+			isEliminated: score.isEliminated ?? false,
+			calculatedScore: score.calculatedScore ?? 0,
+			completionTime: score.completionTime ?? 0,
+			oNotation: score.oNotation ?? null,
+			testCasesPassed: score.testCasesPassed ?? 0,
+			totalTestCases: score.totalTestCases ?? 0,
 		}));
 	}, [scores]);
 
-	const eliminatedSet = useMemo(() => {
-		return new Set(eliminatedParticipants.map((participant) => participant.key));
-	}, [eliminatedParticipants]);
+	const scoreByClientId = useMemo(() => {
+		const map = new Map<string, GameScore>();
+		for (const score of normalizedScores) {
+			map.set(score.clientId, score);
+		}
+		return map;
+	}, [normalizedScores]);
+
+	const winningClientIds = useMemo(() => {
+		const ids = new Set<string>();
+		if (winnerInfo?.winner?.clientId) {
+			ids.add(winnerInfo.winner.clientId);
+		}
+		return ids;
+	}, [winnerInfo]);
 
 	const spectatorViews = useMemo<SpectatorView[]>(() => {
 		return orderedParticipants.map((participant) => {
 			const snapshot = codeSnapshotMap.get(participant.clientId);
 			const cursor = cursorMap.get(participant.clientId);
+			const score = scoreByClientId.get(participant.clientId);
 			const code = snapshot?.code ?? `// ${participant.label}\n// Waiting for live code…`;
 			const language = snapshot?.language ?? null;
 			const lastCodeUpdated = snapshot?.lastUpdated ?? null;
@@ -208,11 +259,12 @@ export default function SpectateSession({ slug }: { slug: string }) {
 				cursorLabel,
 				cursorLine,
 				cursorColumn,
-				isEliminated: eliminatedSet.has(participant.key),
+				isEliminated: score?.isEliminated ?? false,
+				isWinner: winningClientIds.has(participant.clientId),
 				lastCodeUpdated,
 			};
 		});
-	}, [cursorMap, eliminatedSet, codeSnapshotMap, orderedParticipants]);
+	}, [codeSnapshotMap, cursorMap, orderedParticipants, scoreByClientId, winningClientIds]);
 
 	const selectedView = useMemo(() => {
 		if (!selectedClientId) {
@@ -222,6 +274,34 @@ export default function SpectateSession({ slug }: { slug: string }) {
 			spectatorViews.find((view) => view.clientId === selectedClientId) ?? null
 		);
 	}, [selectedClientId, spectatorViews]);
+
+	const renderStatusOverlays = (view: SpectatorView) => (
+		<>
+			{view.isWinner && (
+				<div className="pointer-events-none absolute right-3 top-3 z-30 h-14 w-14 sm:h-16 sm:w-16">
+					<Image
+						src="/crown.png"
+						alt="Winner crown"
+						width={64}
+						height={64}
+						className="h-full w-full"
+					/>
+				</div>
+			)}
+			{view.isEliminated && (
+				<div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-red-600/15">
+					<svg
+						viewBox="0 0 120 120"
+						className="h-32 w-32 text-red-500 sm:h-40 sm:w-40"
+						aria-hidden
+					>
+						<line x1={18} y1={18} x2={102} y2={102} stroke="currentColor" strokeWidth={16} strokeLinecap="round" />
+						<line x1={102} y1={18} x2={18} y2={102} stroke="currentColor" strokeWidth={16} strokeLinecap="round" />
+					</svg>
+				</div>
+			)}
+		</>
+	);
 
 	const renderCodeContent = (
 		view: SpectatorView,
@@ -493,13 +573,7 @@ export default function SpectateSession({ slug }: { slug: string }) {
 											: `Last seen ${new Date(participant.lastSeen).toLocaleTimeString()}`}
 									</span>
 								</div>
-								{participant.isEliminated && (
-									<span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-red-500/10">
-										<span className="text-6xl font-black leading-none text-red-500 drop-shadow-lg">
-											×
-										</span>
-									</span>
-								)}
+								{renderStatusOverlays(participant)}
 							</button>
 						))}
 					</div>
@@ -629,42 +703,42 @@ export default function SpectateSession({ slug }: { slug: string }) {
 							Players who have successfully solved the problem.
 						</CardDescription>
 					</CardHeader>
-					<CardContent>
-						{scores && scores.length === 0 ? (
-							<p className="text-sm text-slate-600 dark:text-slate-300">
-								No completed players yet.
-							</p>
-						) : (
-							<div className="space-y-3">
-								{scores?.map((score, index) => (
-									<div
-										key={`completed-${score.clientId}`}
-										className="flex items-center justify-between rounded-2xl border border-emerald-300/50 bg-emerald-100/60 p-3 shadow-[0_18px_45px_-28px_rgba(10,24,64,0.45)] backdrop-blur-xl dark:border-emerald-400/30 dark:bg-emerald-400/20"
-									>
-										<div className="flex items-center gap-3">
-											<div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-200 text-sm font-semibold text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
-												{index + 1}
-											</div>
-											<div>
-												<span className="text-sm font-medium text-slate-900 dark:text-white">
-													{score.playerName}
-												</span>
-												<p className="text-xs text-slate-600 dark:text-slate-300">
-													Completed at {new Date(score.submittedAt).toLocaleTimeString()}
-												</p>
-											</div>
+				<CardContent>
+					{normalizedScores.length === 0 ? (
+						<p className="text-sm text-slate-600 dark:text-slate-300">
+							No completed players yet.
+						</p>
+					) : (
+						<div className="space-y-3">
+							{normalizedScores.map((score, index) => (
+								<div
+									key={`completed-${score.clientId}`}
+									className="flex items-center justify-between rounded-2xl border border-emerald-300/50 bg-emerald-100/60 p-3 shadow-[0_18px_45px_-28px_rgba(10,24,64,0.45)] backdrop-blur-xl dark:border-emerald-400/30 dark:bg-emerald-400/20"
+								>
+									<div className="flex items-center gap-3">
+										<div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-200 text-sm font-semibold text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+											{index + 1}
 										</div>
-										<div className="text-right">
-											<Badge variant="default" className="bg-emerald-500 text-white hover:bg-emerald-600">
-												{score.score}s
-											</Badge>
+										<div>
+											<span className="text-sm font-medium text-slate-900 dark:text-white">
+												{score.playerName}
+											</span>
+											<p className="text-xs text-slate-600 dark:text-slate-300">
+												Completed at {new Date(score.submittedAt).toLocaleTimeString()}
+											</p>
 										</div>
 									</div>
-								))}
-							</div>
-						)}
-					</CardContent>
-				</Card>
+									<div className="text-right">
+										<Badge variant="default" className="bg-emerald-500 text-white hover:bg-emerald-600">
+											{score.score}s
+										</Badge>
+									</div>
+								</div>
+							))}
+						</div>
+					)}
+				</CardContent>
+			</Card>
 			</div>
 		</div>
 		<Dialog
@@ -700,13 +774,7 @@ export default function SpectateSession({ slug }: { slug: string }) {
 						<pre className="max-h-[60vh] overflow-auto rounded-2xl border border-white/40 bg-white/70 px-4 py-3 text-sm leading-relaxed text-slate-800 shadow-inner shadow-white/30 dark:border-white/10 dark:bg-slate-900/70 dark:text-slate-100">
 							<code>{renderCodeContent(selectedView, true)}</code>
 						</pre>
-						{selectedView.isEliminated && (
-							<span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-red-500/10">
-								<span className="text-[12rem] font-black leading-none text-red-500/80 drop-shadow-lg">
-									×
-								</span>
-							</span>
-						)}
+						{renderStatusOverlays(selectedView)}
 					</div>
 				) : (
 					<p className="text-sm text-slate-600 dark:text-slate-300">
@@ -777,13 +845,7 @@ export default function SpectateSession({ slug }: { slug: string }) {
 													: `Seen ${new Date(participant.lastSeen).toLocaleTimeString()}`}
 											</span>
 										</div>
-										{participant.isEliminated && (
-											<span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-red-500/15">
-												<span className="text-[18vmin] font-black leading-none text-red-500 drop-shadow-2xl">
-													×
-												</span>
-											</span>
-										)}
+						{renderStatusOverlays(participant)}
 									</button>
 								))}
 							</div>

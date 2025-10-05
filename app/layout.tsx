@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 	title: "Code Royale",
 	description: "LeetCode Battle Royale",
 	icons: {
-		icon: "/convex.svg",
+		icon: "/crown.ico",
 	},
 };
 
