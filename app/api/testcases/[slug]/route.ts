@@ -192,7 +192,7 @@ CRITICAL INSTRUCTIONS:
 4. Pay attention to data types: arrays, strings, booleans, numbers, etc.
 5. For boolean outputs, use "true"/"false" (lowercase)
 6. For arrays, use the exact format shown in examples
-7. For strings, include quotes if needed
+7. For strings, include quotes if neededs
 
 Please generate test cases in the following JSON format:
 [
