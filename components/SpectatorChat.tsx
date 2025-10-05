@@ -102,8 +102,8 @@ export default function SpectatorChat({ gameId, className }: SpectatorChatProps)
 	}
 
 	return (
-		<Card className={`${className} flex flex-col h-96`}>
-			<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+		<Card className={`${className} flex flex-col h-96 max-h-96`}>
+			<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 flex-shrink-0">
 				<CardTitle className="text-lg font-semibold flex items-center gap-2">
 					<MessageCircle className="h-5 w-5" />
 					Spectator Chat
@@ -123,8 +123,8 @@ export default function SpectatorChat({ gameId, className }: SpectatorChatProps)
 					</Button>
 				</div>
 			</CardHeader>
-			<CardContent className="flex-1 flex flex-col p-0">
-				<ScrollArea className="flex-1 px-4">
+			<CardContent className="flex-1 flex flex-col p-0 min-h-0">
+				<ScrollArea className="flex-1 px-4 min-h-0">
 					<div className="space-y-3 pb-4">
 						{messages?.length === 0 ? (
 							<div className="text-center py-8 text-muted-foreground">
@@ -177,7 +177,7 @@ export default function SpectatorChat({ gameId, className }: SpectatorChatProps)
 						<div ref={messagesEndRef} />
 					</div>
 				</ScrollArea>
-				<form onSubmit={handleSendMessage} className="p-4 border-t">
+				<form onSubmit={handleSendMessage} className="p-4 border-t flex-shrink-0">
 					<div className="flex gap-2">
 						<Input
 							ref={inputRef}

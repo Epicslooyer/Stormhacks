@@ -1,32 +1,15 @@
 import { NextResponse } from "next/server";
 import { openrouter } from "@/lib/openrouter";
-import { generateText, generateObject } from "ai";
+import { generateObject } from "ai";
 import { z } from "zod";
 
 export const runtime = "nodejs";
 
-// Zod schemas for structured AI responses
-const CodeAnalysisSchema = z.object({
-  cleaned_code: z.string().describe("The cleaned, executable version of the code"),
-  analysis: z.string().describe("Brief analysis of what the code does and any issues found"),
-  execution_plan: z.string().describe("How to execute this code with the test cases"),
-  problem_type: z.enum(["single_parameter", "multi_parameter", "class_based", "function_based"]).describe("Type of problem structure"),
-  method_name: z.string().optional().describe("The main method/function name to call"),
-  parameters: z.array(z.string()).optional().describe("Parameter names for the method"),
-});
-
+// Zod schema for test evaluation
 const TestEvaluationSchema = z.object({
   passed: z.boolean().describe("Whether the test case passed"),
   reason: z.string().describe("Brief explanation of why it passed or failed"),
   actual_output: z.string().describe("The actual output from the code execution"),
-});
-
-const FeedbackSchema = z.object({
-  overall_assessment: z.string().describe("Overall assessment of the code"),
-  strengths: z.array(z.string()).describe("What's working well"),
-  improvements: z.array(z.string()).describe("Areas for improvement"),
-  suggestions: z.array(z.string()).describe("Specific suggestions for improvement"),
-  encouragement: z.string().describe("Encouraging message for the user"),
 });
 
 interface EvaluateRequest {
@@ -73,43 +56,20 @@ export async function POST(request: Request) {
     console.log("Language:", language);
     console.log("Test cases:", testCases.length);
 
-    // Step 1: AI Code Analysis - Only analyze, don't modify
-    const analysisResult = await generateObject({
-      model: openrouter("google/gemini-2.5-flash-preview-09-2025"),
-      schema: CodeAnalysisSchema,
-      prompt: `You are an expert code reviewer. Analyze the provided code WITHOUT modifying it.
-
-Problem: ${problemTitle || "LeetCode Problem"}
-Description: ${problemDescription || "No description provided"}
-Language: ${language}
-
-User's Code:
-\`\`\`${language}
-${code}
-\`\`\`
-
-Test Cases:
-${testCases.map((tc, i) => `Test ${i + 1}: Input: ${tc.input}, Expected: ${tc.expectedOutput}`).join('\n')}
-
-IMPORTANT: Do NOT modify, complete, or fix the code. Only analyze what the user has written.
-- Return the EXACT same code in cleaned_code field
-- Analyze what the code does (even if incomplete or incorrect)
-- Identify the problem type and method name if detectable
-- Do NOT provide a working implementation`,
-      temperature: 0.1,
-    });
-
-    const { cleaned_code, analysis, execution_plan, problem_type, method_name, parameters } = analysisResult.object;
-
-    console.log("AI Analysis:", analysis);
-    console.log("Problem Type:", problem_type);
-    console.log("Method Name:", method_name);
-
-    // Step 2: AI-based evaluation without code execution
-    const results = [];
+    // Step 2: AI-based evaluation for each test case
+    const results: Array<{
+      testCase: number;
+      input: string;
+      expectedOutput: string;
+      actualOutput: string;
+      passed: boolean;
+      executionTime: number;
+      description?: string;
+    }> = [];
     let totalTime = 0;
     let passedTests = 0;
 
+    // Evaluate each test case with AI
     for (let i = 0; i < testCases.length; i++) {
       const testCase = testCases[i];
       const startTime = Date.now();
@@ -118,9 +78,9 @@ IMPORTANT: Do NOT modify, complete, or fix the code. Only analyze what the user 
       const evaluationResult = await generateObject({
         model: openrouter("google/gemini-2.5-flash-preview-09-2025"),
         schema: TestEvaluationSchema,
-        prompt: `Analyze the user's code and determine if it would pass this test case.
+        prompt: `You are an expert code evaluator. Analyze the user's code and determine if it would produce the correct output for this specific test case.
 
-Problem: ${problemTitle || "LeetCode Problem"}
+Problem: ${problemTitle || "Coding Problem"}
 Language: ${language}
 
 User's Code:
@@ -128,18 +88,25 @@ User's Code:
 ${code}
 \`\`\`
 
-Test Case:
+Test Case ${i + 1}:
 - Input: ${testCase.input}
 - Expected Output: ${testCase.expectedOutput}
-- Description: ${testCase.description || "No description"}
+- Description: ${testCase.description || "No description provided"}
 
-Analyze the code logic and determine if it would produce the expected output for this test case. Consider:
-1. Does the code implement the correct algorithm?
-2. Would it handle this specific input correctly?
-3. Are there any logical errors or missing implementations?
-4. Does the code structure support the expected functionality?
+Instructions:
+1. Analyze the code logic step by step
+2. Trace through what the code would do with the given input
+3. Determine if the code would produce the expected output
+4. Be generous - if the code has reasonable logic that could work, mark it as passed
+5. Only mark as failed if the code is clearly wrong or incomplete
 
-Provide your assessment of whether this test case would PASS or FAIL based on code analysis.`,
+Consider:
+- Does the code handle the input format correctly?
+- Is the algorithm logic sound?
+- Would it produce the expected output?
+- Are there any obvious errors that would prevent it from working?
+
+Be fair but not overly strict. If the code shows understanding of the problem and has reasonable logic, it should pass.`,
         temperature: 0.1,
       });
 
@@ -160,35 +127,6 @@ Provide your assessment of whether this test case would PASS or FAIL based on co
       });
     }
 
-    // Step 4: Generate Overall Feedback with structured response
-    const feedbackResult = await generateObject({
-      model: openrouter("google/gemini-2.5-flash-preview-09-2025"),
-      schema: FeedbackSchema,
-      prompt: `Provide constructive feedback based on the test results.
-
-Analysis: ${analysis}
-Test Results: ${passedTests}/${testCases.length} tests passed
-
-Detailed Results:
-${results.map(r => `Test ${r.testCase}: ${r.passed ? 'PASSED' : 'FAILED'} - Expected: ${r.expectedOutput}, Got: ${r.actualOutput}`).join('\n')}
-
-Provide encouraging, constructive feedback that helps the user improve.`,
-      temperature: 0.3,
-    });
-
-    const feedback = `${feedbackResult.object.overall_assessment}
-
-Strengths:
-${feedbackResult.object.strengths.map(s => `• ${s}`).join('\n')}
-
-Areas for Improvement:
-${feedbackResult.object.improvements.map(i => `• ${i}`).join('\n')}
-
-Suggestions:
-${feedbackResult.object.suggestions.map(s => `• ${s}`).join('\n')}
-
-${feedbackResult.object.encouragement}`;
-
     const evaluationResult: EvaluationResult = {
       success: true,
       results,
@@ -197,7 +135,7 @@ ${feedbackResult.object.encouragement}`;
         passedTests,
         totalTime,
       },
-      feedback,
+      feedback: undefined, // No feedback requested
       cleanedCode: undefined, // Don't show cleaned code since we're not modifying user code
     };
 
