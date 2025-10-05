@@ -130,13 +130,42 @@ export default function GameSession({ slug }: { slug: string }) {
 		language: null,
 	});
 
-	// Start game timer when countdown ends
+	// Guard to ensure timer only starts once per session
+	const timerStartedRef = useRef(false);
+
+	// Start game timer automatically with robust guards and logs
 	useEffect(() => {
-		if (countdownMs === 0 && !gameStarted) {
+		console.log("[TIMER] auto-start effect", {
+			mode: game?.mode ?? null,
+			status: game?.status ?? null,
+			countdownMs,
+			gameStarted,
+			alreadyStarted: timerStartedRef.current,
+			presenceCount,
+			participantsCount: participants.length,
+		});
+
+		// Prevent double-start
+		if (timerStartedRef.current) return;
+
+		// Solo detection: explicit solo mode OR inferred by presence/participants
+		const inferredSolo = game?.mode === "solo" || presenceCount <= 1 || participants.length <= 1;
+		if (inferredSolo) {
+			console.log("[TIMER] starting for solo (explicit or inferred)", { inferredSolo, presenceCount, participants: participants.length });
+			timerStartedRef.current = true;
+			setGameStarted(true);
+			gameTimer.start();
+			return;
+		}
+
+		// Multiplayer: start on countdown end and active status
+		if (game?.status === "active" && countdownMs === 0) {
+			console.log("[TIMER] starting for multiplayer countdown end");
+			timerStartedRef.current = true;
 			setGameStarted(true);
 			gameTimer.start();
 		}
-	}, [countdownMs, gameStarted, gameTimer]);
+	}, [countdownMs, game?.mode, game?.status, gameStarted, gameTimer, presenceCount, participants.length]);
 
 	// Timer logic
 	useEffect(() => {
@@ -168,6 +197,14 @@ export default function GameSession({ slug }: { slug: string }) {
 		(editorInstance: MonacoEditorNS.IStandaloneCodeEditor) => {
 			editorRef.current = editorInstance;
 			cursorListenerRef.current?.dispose();
+			console.log("[TIMER] editor mounted", { mode: game?.mode, alreadyStarted: timerStartedRef.current });
+			// Fallback: if solo and not started yet, start on editor mount
+			if (game?.mode === "solo" && !timerStartedRef.current) {
+				console.log("[TIMER] fallback start on editor mount (solo)");
+				timerStartedRef.current = true;
+				setGameStarted(true);
+				gameTimer.start();
+			}
 			cursorListenerRef.current = editorInstance.onDidChangeCursorPosition(
 				(event: any) => {
 					pendingCursorRef.current = {
@@ -582,6 +619,7 @@ export default function GameSession({ slug }: { slug: string }) {
 			
 			// Stop the timer
 			gameTimer.stop();
+			console.log("Timer stopped. Elapsed time:", gameTimer.elapsedTime, "ms");
 			
 			let outputText = `🎯 FINAL SUBMISSION RESULTS\n`;
 			outputText += `============================\n`;
@@ -780,6 +818,9 @@ export default function GameSession({ slug }: { slug: string }) {
 									<p className="font-mono text-lg font-bold text-foreground">
 										{gameTimer.getFormattedTime()}
 									</p>
+									<p className="text-xs text-muted-foreground">
+										{gameTimer.isRunning ? "Running" : "Paused"}
+									</p>
 								</div>
 								{gameWinner && !gameWinner.isGameOver && gameWinner.leader && (
 									<div className="text-center">
@@ -789,6 +830,28 @@ export default function GameSession({ slug }: { slug: string }) {
 										</p>
 									</div>
 								)}
+							</div>
+						)}
+						{!gameStarted && game?.status === "active" && (
+							<div className="text-center space-y-2">
+								<Button 
+									variant="outline" 
+									size="sm" 
+									onClick={() => {
+										console.log("Manual timer start clicked");
+										setGameStarted(true);
+										gameTimer.start();
+									}}
+								>
+									Start Timer
+								</Button>
+								<div className="text-xs text-muted-foreground">
+									Timer should start automatically. If not, click above.
+								</div>
+								<div className="text-xs text-muted-foreground">
+									Current timer state: {gameTimer.isRunning ? "Running" : "Stopped"} | 
+									Elapsed: {gameTimer.elapsedTime}ms
+								</div>
 							</div>
 						)}
 						{submitted && (
