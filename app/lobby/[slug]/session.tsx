@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
+const MAX_PLAYERS = 100;
+const MIN_PLAYERS_TO_START = 2;
+
 export default function LobbySession({ slug }: { slug: string }) {
 	const router = useRouter();
 	const {
@@ -35,7 +38,11 @@ export default function LobbySession({ slug }: { slug: string }) {
 		game?.createdBy !== undefined &&
 		viewerId !== null &&
 		game.createdBy === viewerId;
-	const canStart = status === "lobby" && isOwner && presenceCount >= 2 && readyCount >= 2;
+	const canStart =
+		status === "lobby" &&
+		isOwner &&
+		presenceCount >= MIN_PLAYERS_TO_START &&
+		readyCount >= MIN_PLAYERS_TO_START;
 	const countdownActive = status === "countdown" && countdownSeconds !== null;
 	const problemTitle = game?.problemTitle ?? game?.name ?? resolvedSlug;
 	const problemDifficulty = game?.problemDifficulty ?? null;
@@ -56,8 +63,9 @@ export default function LobbySession({ slug }: { slug: string }) {
 		});
 	}, [participants]);
 
-	const currentPlayer = visibleParticipants.find(p => p.clientId === clientId);
+	const currentPlayer = visibleParticipants.find((p) => p.clientId === clientId);
 	const isCurrentPlayerReady = currentPlayer?.isReady ?? false;
+	const emptySlots = Math.max(MAX_PLAYERS - visibleParticipants.length, 0);
 
 	useEffect(() => {
 		if (status === "active") {
@@ -106,89 +114,89 @@ export default function LobbySession({ slug }: { slug: string }) {
 					</Card>
 				)}
 
-				{/* Main Content */}
-				<div className="grid md:grid-cols-2 gap-6">
-					{/* Players Section */}
-					<Card className="h-fit">
-						<CardHeader>
-							<CardTitle className="flex items-center gap-2">
-								<div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-								Players ({presenceCount}/2) - Ready ({readyCount}/2)
-							</CardTitle>
-						</CardHeader>
-						<CardContent className="space-y-3">
-							{visibleParticipants.length === 0 ? (
-								<div className="text-center py-8 text-muted-foreground">
-									<div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-										<svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-										</svg>
-									</div>
-									<p>Waiting for players to join...</p>
+			{/* Main Content */}
+			<div className="grid md:grid-cols-2 gap-6">
+				{/* Players Section */}
+				<Card className="h-fit">
+					<CardHeader>
+						<CardTitle className="flex items-center gap-2">
+							<div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+							Players ({Math.min(presenceCount, MAX_PLAYERS)}/{MAX_PLAYERS}) - Ready ({Math.min(readyCount, MAX_PLAYERS)}/{MAX_PLAYERS})
+						</CardTitle>
+					</CardHeader>
+					<CardContent className="space-y-3">
+						{visibleParticipants.length === 0 ? (
+							<div className="text-center py-8 text-muted-foreground">
+								<div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+									<svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+									</svg>
 								</div>
-							) : (
-								<div className="space-y-3">
-									{visibleParticipants.map((player, index) => (
-										<div
-											key={player.key}
-											className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border"
-										>
-											<div className="flex items-center gap-3">
-												<div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
-													{index + 1}
-												</div>
-												<div>
-													<p className="font-medium">{player.label}</p>
-													{player.isGuest && (
-														<Badge variant="outline" className="text-xs">
-															Guest
-														</Badge>
-													)}
-												</div>
+								<p>Waiting for players to join...</p>
+							</div>
+						) : (
+							<div className="space-y-3">
+								{visibleParticipants.map((player, index) => (
+									<div
+										key={player.key}
+										className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border"
+									>
+										<div className="flex items-center gap-3">
+											<div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
+												{index + 1}
 											</div>
-											<div className="flex items-center gap-2">
-												{player.isReady ? (
-													<>
-														<div className="w-2 h-2 bg-green-500 rounded-full"></div>
-														<span className="text-sm text-green-600 dark:text-green-400">Ready</span>
-													</>
-												) : (
-													<>
-														<div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-														<span className="text-sm text-orange-600 dark:text-orange-400">Not Ready</span>
-													</>
+											<div>
+												<p className="font-medium">{player.label}</p>
+												{player.isGuest && (
+													<Badge variant="outline" className="text-xs">
+														Guest
+													</Badge>
 												)}
 											</div>
 										</div>
-									))}
-									
-									{/* Empty slots for remaining players */}
-									{Array.from({ length: 2 - visibleParticipants.length }).map((_, index) => (
-										<div
-											key={`empty-${index}`}
-											className="flex items-center justify-between p-3 rounded-lg border-2 border-dashed border-muted-foreground/30"
-										>
-											<div className="flex items-center gap-3">
-												<div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground">
-													{visibleParticipants.length + index + 1}
-												</div>
-												<div>
-													<p className="font-medium text-muted-foreground">Waiting for player...</p>
-												</div>
+										<div className="flex items-center gap-2">
+											{player.isReady ? (
+												<>
+													<div className="w-2 h-2 bg-green-500 rounded-full"></div>
+													<span className="text-sm text-green-600 dark:text-green-400">Ready</span>
+												</>
+											) : (
+												<>
+													<div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+													<span className="text-sm text-orange-600 dark:text-orange-400">Not Ready</span>
+												</>
+											)}
+										</div>
+									</div>
+								))}
+
+								{emptySlots > 0 && (
+									<div className="flex items-center justify-between p-3 rounded-lg border-2 border-dashed border-muted-foreground/30">
+										<div className="flex items-center gap-3">
+											<div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground">
+												+{emptySlots}
 											</div>
-											<div className="flex items-center gap-2">
-												<div className="w-2 h-2 bg-muted-foreground/30 rounded-full"></div>
-												<span className="text-sm text-muted-foreground">Not ready</span>
+											<div>
+												<p className="font-medium text-muted-foreground">
+													{emptySlots === 1
+														? "1 more player can join"
+														: `${emptySlots} more players can join`}
+												</p>
 											</div>
 										</div>
-									))}
-								</div>
-							)}
-						</CardContent>
-					</Card>
+										<div className="flex items-center gap-2">
+											<div className="w-2 h-2 bg-muted-foreground/30 rounded-full"></div>
+											<span className="text-sm text-muted-foreground">Awaiting players</span>
+										</div>
+									</div>
+								)}
+							</div>
+						)}
+					</CardContent>
+				</Card>
 
-					{/* Game Info & Actions */}
-					<Card className="h-fit">
+			{/* Game Info & Actions */}
+			<Card className="h-fit">
 						<CardHeader>
 							<CardTitle>Game Settings</CardTitle>
 						</CardHeader>
@@ -247,37 +255,40 @@ export default function LobbySession({ slug }: { slug: string }) {
 									 isCurrentPlayerReady ? "Unready" : "Ready Up"}
 								</Button>
 
-								{/* Start Game Button */}
-								{isOwner ? (
-									<Button
-										className="w-full"
-										size="lg"
-										disabled={!canStart || pending}
-										onClick={async () => {
-											if (!canStart || pending) return;
-											setPending(true);
-											try {
-												await beginCountdown({ slug: resolvedSlug, durationMs: 5000 });
-											} finally {
-												setPending(false);
-											}
-										}}
-									>
-										{pending ? "Starting..." : 
-										 presenceCount < 2 ? "Waiting for players..." : 
-										 readyCount < 2 ? "Waiting for ready..." :
-										 "Start Game"}
-									</Button>
-								) : (
-									<div className="text-center space-y-2">
-										<Button variant="outline" className="w-full" disabled>
-											Waiting for host to start...
-										</Button>
-										<p className="text-sm text-muted-foreground">
-											Only the lobby creator can start the game
-										</p>
-									</div>
-								)}
+				{/* Start Game Button */}
+				{isOwner ? (
+					<Button
+						className="w-full"
+						size="lg"
+						disabled={!canStart || pending}
+						onClick={async () => {
+							if (!canStart || pending) return;
+							setPending(true);
+							try {
+								await beginCountdown({ slug: resolvedSlug, durationMs: 5000 });
+							} finally {
+								setPending(false);
+							}
+						}}
+					>
+						{pending
+							? "Starting..."
+							: presenceCount < MIN_PLAYERS_TO_START
+								? "Waiting for players..."
+								: readyCount < MIN_PLAYERS_TO_START
+									? "Waiting for ready..."
+									: "Start Game"}
+					</Button>
+				) : (
+					<div className="text-center space-y-2">
+						<Button variant="outline" className="w-full" disabled>
+							Waiting for host to start...
+						</Button>
+						<p className="text-sm text-muted-foreground">
+							Only the lobby creator can start the game
+						</p>
+					</div>
+				)}
 
 								<Link href={`/game/${resolvedSlug}`}>
 									<Button variant="ghost" className="w-full">
