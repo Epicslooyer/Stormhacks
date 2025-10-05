@@ -32,13 +32,13 @@ export const getScoresForGame = query({
 function getTimeLimitForDifficulty(difficulty: string): number {
     switch (difficulty.toLowerCase()) {
         case 'easy':
-            return 2 * 60 * 1000; // 2 minutes in milliseconds
+            return 5 * 60 * 1000; // 5 minutes in milliseconds
         case 'medium':
-            return 4 * 60 * 1000; // 4 minutes
+            return 10 * 60 * 1000; // 10 minutes
         case 'hard':
-            return 6 * 60 * 1000; // 6 minutes
+            return 15 * 60 * 1000; // 15 minutes
         default:
-            return 4 * 60 * 1000; // Default to 4 minutes
+            return 10 * 60 * 1000; // Default to medium duration
     }
 }
 
@@ -477,6 +477,8 @@ export const getGame = query({
 			problemTitle: game.problemTitle ?? null,
 			problemDifficulty: game.problemDifficulty ?? null,
 			mode: game.mode ?? null,
+		startedAt: game.startedAt ?? null,
+		timeLimit: game.timeLimit ?? null,
 			viewerId,
 		};
 	},

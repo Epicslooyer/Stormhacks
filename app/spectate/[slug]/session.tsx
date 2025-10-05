@@ -86,6 +86,7 @@ export default function SpectateSession({ slug }: { slug: string }) {
 	const scores = useQuery(api.games.getScoresForGame, { slug });
 	const winnerInfo = useQuery(api.games.getGameWinner, { slug }) as WinnerInfo;
 	const [countdownMs, setCountdownMs] = useState<number | null>(null);
+	const [timeLeft, setTimeLeft] = useState<number | null>(null);
 	const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 	const [viewerOpen, setViewerOpen] = useState(false);
 	const [fullscreenOpen, setFullscreenOpen] = useState(false);
@@ -112,6 +113,30 @@ export default function SpectateSession({ slug }: { slug: string }) {
 		const interval = setInterval(tick, 200);
 		return () => clearInterval(interval);
 	}, [countdownEndsAt]);
+
+	useEffect(() => {
+		if (status !== "active") {
+			setTimeLeft(null);
+			return;
+		}
+
+		const startedAt = game?.startedAt ?? null;
+		const rawLimit = game?.timeLimit ?? getTimeLimitForDifficultyClient(game?.problemDifficulty);
+		if (!startedAt || !rawLimit) {
+			setTimeLeft(null);
+			return;
+		}
+
+		const update = () => {
+			const now = Date.now();
+			const remaining = Math.max(0, startedAt + rawLimit - now);
+			setTimeLeft(remaining);
+		};
+
+		update();
+		const interval = setInterval(update, 1000);
+		return () => clearInterval(interval);
+	}, [status, game?.startedAt, game?.timeLimit, game?.problemDifficulty]);
 
 	const countdownSeconds =
 		countdownMs === null ? null : Math.ceil(countdownMs / 1000);
@@ -527,6 +552,23 @@ export default function SpectateSession({ slug }: { slug: string }) {
 				</CardContent>
 			</Card>
 		)}
+		{status === "active" && timeLeft !== null && (
+			<Card className={`${glassCardClassName} border-emerald-400/40 bg-emerald-100/35 dark:border-emerald-300/40 dark:bg-emerald-400/10`}>
+				<CardContent className="py-6">
+					<div className="space-y-2 text-center">
+						<p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-200">
+							Time remaining
+						</p>
+						<p className="text-5xl font-bold text-emerald-900 dark:text-emerald-50">
+							{formatCountdown(timeLeft)}
+						</p>
+						<p className="text-sm text-slate-600 dark:text-slate-300">
+							Players who fail to submit in time will be eliminated
+						</p>
+					</div>
+				</CardContent>
+			</Card>
+		)}
 		<Card className={glassCardClassName}>
 			<CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 				<CardTitle className="text-xl font-semibold text-slate-900 dark:text-white">
@@ -871,4 +913,25 @@ export default function SpectateSession({ slug }: { slug: string }) {
 		</Dialog>
 	</>
 );
+}
+
+function formatCountdown(timeMs: number) {
+	const safe = Math.max(0, timeMs);
+	const totalSeconds = Math.ceil(safe / 1000);
+	const minutes = Math.floor(totalSeconds / 60);
+	const seconds = totalSeconds % 60;
+	return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+function getTimeLimitForDifficultyClient(difficulty: string | null | undefined) {
+	switch (difficulty?.toLowerCase()) {
+		case "easy":
+			return 5 * 60 * 1000;
+		case "medium":
+			return 10 * 60 * 1000;
+		case "hard":
+			return 15 * 60 * 1000;
+		default:
+			return 10 * 60 * 1000;
+	}
 }
