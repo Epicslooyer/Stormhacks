@@ -1,4 +1,6 @@
+
 "use client";
+import { useRouter } from "next/navigation";
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -48,6 +50,7 @@ const REMOTE_CURSOR_STYLES = [
 const REMOTE_CURSOR_STYLE_ELEMENT_ID = "remote-cursor-styles";
 
 export default function GameSession({ slug }: { slug: string }) {
+	const router = useRouter();
 	const {
 		game,
 		clientId,
@@ -58,6 +61,13 @@ export default function GameSession({ slug }: { slug: string }) {
 		cursorPositions,
 		codeSnapshots,
 	} = useGameConnection(slug, "/game");
+
+	// Redirect to ending page when game is completed (solo or multiplayer)
+	useEffect(() => {
+		if (game?.status === "completed") {
+			router.replace(`/game/${resolvedSlug}/ending`);
+		}
+	}, [game?.status, resolvedSlug, router]);
 	const [copied, setCopied] = useState(false);
 	const countdownSeconds =
 		countdownMs === null ? null : Math.ceil(countdownMs / 1000);

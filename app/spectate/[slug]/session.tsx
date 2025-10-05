@@ -101,7 +101,11 @@ export default function SpectateSession({ slug }: { slug: string }) {
 			const additions = visibleParticipants
 				.map((participant) => participant.clientId)
 				.filter((clientId) => !filtered.includes(clientId));
-			return [...filtered, ...additions];
+			const nextOrder = [...filtered, ...additions];
+			const hasChanges =
+				nextOrder.length !== previous.length ||
+				nextOrder.some((clientId, index) => clientId !== previous[index]);
+			return hasChanges ? nextOrder : previous;
 		});
 	}, [visibleParticipants]);
 
