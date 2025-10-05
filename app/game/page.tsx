@@ -9,9 +9,10 @@ export default function GameHomePage() {
 				Games are launched from lobbies. Create one below or join an existing
 				lobby to coordinate before entering the live match.
 			</p>
-			<div className="flex justify-center">
-				<CreateGameButton redirectBase="/lobby" label="Create new lobby" />
-			</div>
+					<div className="flex justify-center gap-4">
+						<CreateGameButton redirectBase="/lobby" label="Solo Game" mode="solo" />
+						<CreateGameButton redirectBase="/lobby" label="Multiplayer Lobby" mode="multiplayer" />
+					</div>
 			<p className="text-center text-sm">
 				Already have a game running? Visit{" "}
 				<Link href="/lobby" className="underline hover:no-underline">

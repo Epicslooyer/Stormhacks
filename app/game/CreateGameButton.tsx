@@ -12,9 +12,11 @@ function generateSlug() {
 export default function CreateGameButton({
 	redirectBase = "/game",
 	label = "Create new game",
+	mode = "multiplayer",
 }: {
 	redirectBase?: string;
 	label?: string;
+	mode?: "solo" | "multiplayer";
 }) {
 	const router = useRouter();
 	const getOrCreateGame = useMutation(api.games.getOrCreateGame);
@@ -29,9 +31,9 @@ export default function CreateGameButton({
 				if (pending) return;
 				setPending(true);
 				try {
-					const slug = generateSlug();
-					await getOrCreateGame({ slug, name: "New Game" });
-					router.push(`${redirectBase}/${slug}`);
+						const slug = generateSlug();
+						await getOrCreateGame({ slug, name: mode === "solo" ? "Solo Game" : "New Game", mode });
+						router.push(`${redirectBase}/${slug}`);
 				} finally {
 					setPending(false);
 				}

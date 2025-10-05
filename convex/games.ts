@@ -85,13 +85,14 @@ async function getGameBySlug(
 }
 
 export const getOrCreateGame = mutation({
-	args: {
-		slug: v.string(),
-		name: v.optional(v.string()),
-		problemSlug: v.optional(v.string()),
-		problemTitle: v.optional(v.string()),
-		problemDifficulty: v.optional(v.string()),
-	},
+       args: {
+	       slug: v.string(),
+	       name: v.optional(v.string()),
+	       problemSlug: v.optional(v.string()),
+	       problemTitle: v.optional(v.string()),
+	       problemDifficulty: v.optional(v.string()),
+	       mode: v.optional(v.union(v.literal("solo"), v.literal("multiplayer"))),
+       },
 	handler: async (ctx, args) => {
 		const existing = await getGameBySlug(ctx.db, args.slug);
 		if (existing) {
@@ -100,16 +101,17 @@ export const getOrCreateGame = mutation({
 
 		const userId = await getAuthUserId(ctx);
 		const now = Date.now();
-		const gameId = await ctx.db.insert("games", {
-			slug: args.slug,
-			name: args.name ?? `Game ${args.slug}`,
-			createdBy: userId ?? undefined,
-			createdAt: now,
-			status: "lobby",
-			problemSlug: args.problemSlug ?? undefined,
-			problemTitle: args.problemTitle ?? undefined,
-			problemDifficulty: args.problemDifficulty ?? undefined,
-		});
+	       const gameId = await ctx.db.insert("games", {
+		       slug: args.slug,
+		       name: args.name ?? `Game ${args.slug}`,
+		       createdBy: userId ?? undefined,
+		       createdAt: now,
+		       status: "lobby",
+		       problemSlug: args.problemSlug ?? undefined,
+		       problemTitle: args.problemTitle ?? undefined,
+		       problemDifficulty: args.problemDifficulty ?? undefined,
+		       mode: args.mode ?? "multiplayer",
+	       });
 
 		return { gameId, slug: args.slug, created: true };
 	},

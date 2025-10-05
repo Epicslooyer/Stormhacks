@@ -13,6 +13,7 @@ export const gameTables = {
 			v.literal("completed"),
 			v.literal("countdown"),
 		),
+		mode: v.optional(v.union(v.literal("solo"), v.literal("multiplayer"))),
 		countdownEndsAt: v.optional(v.number()),
 		problemSlug: v.optional(v.string()),
 		problemTitle: v.optional(v.string()),
