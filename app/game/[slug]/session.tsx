@@ -104,11 +104,32 @@ export default function GameSession({ slug }: { slug: string }) {
 	
 	// Game timer
 	const gameTimer = useGameTimer();
+	const localStartTimeRef = useRef<number | null>(null);
+	const gameTiming = useMemo(() => {
+		const gameData = game as Game | undefined;
+		return {
+			startedAt: gameData?.startedAt ?? null,
+			timeLimit: gameData?.timeLimit ?? null,
+		};
+	}, [game]);
+	const fallbackTimeLimit = useMemo(() => {
+		if (gameTiming.timeLimit) return gameTiming.timeLimit;
+		const rawDifficulty = problem?.difficulty ?? game?.problemDifficulty ?? null;
+		return getTimeLimitForDifficultyClient(rawDifficulty);
+	}, [gameTiming.timeLimit, problem?.difficulty, game?.problemDifficulty]);
+
+	useEffect(() => {
+		if (gameTiming.startedAt) {
+			localStartTimeRef.current = gameTiming.startedAt;
+		}
+	}, [gameTiming.startedAt]);
 	
 	// Convex mutations and queries
+	const eliminateTimeoutPlayers = useMutation(api.games.eliminateTimeoutPlayers);
 	const updateCursorPosition = useMutation(api.games.updateCursorPosition);
 	const updateCodeState = useMutation(api.games.updateCodeState);
 	const submitScore = useMutation(api.games.submitScore);
+	const finalizeGameIfDone = useMutation(api.games.finalizeGameIfDone);
 	const checkEliminationThreshold = useMutation(api.games.checkEliminationThreshold);
 	const scores = useQuery(api.games.getScoresForGame, { slug: resolvedSlug });
 	const leaderboard = useQuery(api.games.getGameLeaderboard, { slug: resolvedSlug });
@@ -157,6 +178,7 @@ export default function GameSession({ slug }: { slug: string }) {
 
 	// Guard to ensure timer only starts once per session
 	const timerStartedRef = useRef(false);
+	const timeoutHandledRef = useRef(false);
 
 	// Start game timer automatically with robust guards and logs
 	useEffect(() => {
@@ -168,6 +190,7 @@ export default function GameSession({ slug }: { slug: string }) {
 		const inferredSolo = game?.mode === "solo" || presenceCount <= 1 || participants.length <= 1;
 		if (inferredSolo) {
 			timerStartedRef.current = true;
+			localStartTimeRef.current = localStartTimeRef.current ?? Date.now();
 			setGameStarted(true);
 			gameTimer.start();
 			return;
@@ -176,6 +199,7 @@ export default function GameSession({ slug }: { slug: string }) {
 		// Multiplayer: start on countdown end and active status
 		if (game?.status === "active" && countdownMs === 0) {
 			timerStartedRef.current = true;
+			localStartTimeRef.current = localStartTimeRef.current ?? Date.now();
 			setGameStarted(true);
 			gameTimer.start();
 		}
@@ -183,9 +207,8 @@ export default function GameSession({ slug }: { slug: string }) {
 
 	// Timer logic
 	useEffect(() => {
-		const gameData = game as Game | undefined;
-		const startTime = gameData?.startedAt;
-		const limit = gameData?.timeLimit;
+		const startTime = gameTiming.startedAt ?? localStartTimeRef.current;
+		const limit = gameTiming.timeLimit ?? fallbackTimeLimit;
 		
 		if (!startTime || !limit) return;
 		
@@ -196,16 +219,44 @@ export default function GameSession({ slug }: { slug: string }) {
 			
 			setTimeLeft(remaining);
 			
-			if (remaining <= 0 && !submitted) {
-				// Time's up! Player will be eliminated
-				router.replace(`/game/${resolvedSlug}/ending`);
+			if (remaining <= 0) {
+				if (!timeoutHandledRef.current) {
+					timeoutHandledRef.current = true;
+					void (async () => {
+						try {
+							await eliminateTimeoutPlayers({});
+						} catch (error) {
+							console.error("Failed to eliminate timed-out players", error);
+						}
+						try {
+							await finalizeGameIfDone({ slug: resolvedSlug });
+						} catch (error) {
+							console.error("Failed to finalize game after timeout", error);
+						}
+					})();
+				}
+				if (!submitted) {
+					router.replace(`/game/${resolvedSlug}/ending`);
+				}
 			}
 		};
 		
 		updateTimer();
 		const interval = setInterval(updateTimer, 1000);
 		return () => clearInterval(interval);
-	}, [game, submitted, resolvedSlug, router]);
+	}, [gameTiming, submitted, resolvedSlug, router, eliminateTimeoutPlayers, finalizeGameIfDone]);
+
+	useEffect(() => {
+		timeoutHandledRef.current = false;
+	}, [gameTiming.startedAt, gameTiming.timeLimit]);
+
+	useEffect(() => {
+		if (game?.status !== "active" && game?.status !== "countdown") {
+			timerStartedRef.current = false;
+			localStartTimeRef.current = null;
+			setGameStarted(false);
+		}
+	}, [game?.status]);
 
 	const handleEditorMount = useCallback(
 		(editorInstance: MonacoEditorNS.IStandaloneCodeEditor) => {
@@ -825,17 +876,23 @@ export default function GameSession({ slug }: { slug: string }) {
 								Waiting for the host to begin the game…
 							</p>
 						)}
-		{gameStarted && !submitted && !isEliminated && (
-							<div className="flex items-center gap-4">
-								<div className="text-center">
-									<p className="text-sm text-muted-foreground">Time</p>
-									<p className="font-mono text-lg font-bold text-foreground">
-										{gameTimer.getFormattedTime()}
-									</p>
-									<p className="text-xs text-muted-foreground">
-										{gameTimer.isRunning ? "Running" : "Paused"}
-									</p>
-								</div>
+	{gameStarted && !submitted && !isEliminated && (
+			<div className="flex items-center gap-4">
+				<div className="text-center">
+					<p className="text-sm text-muted-foreground">Time Remaining</p>
+					<p className="font-mono text-lg font-bold text-foreground">
+						{timeLeft !== null ? formatCountdown(timeLeft) : gameTimer.getFormattedTime()}
+					</p>
+					<p className="text-xs text-muted-foreground">
+						{timeLeft !== null
+							? timeLeft > 0
+								? "Counting down"
+								: "Time's up"
+							: gameTimer.isRunning
+								? "Running"
+								: "Paused"}
+					</p>
+				</div>
 								{gameWinner && !gameWinner.isGameOver && gameWinner.leader && (
 									<div className="text-center">
 										<p className="text-sm text-muted-foreground">Leader</p>
@@ -853,6 +910,7 @@ export default function GameSession({ slug }: { slug: string }) {
 									size="sm" 
 									onClick={() => {
 										console.log("Manual timer start clicked");
+						localStartTimeRef.current = localStartTimeRef.current ?? Date.now();
 										setGameStarted(true);
 										gameTimer.start();
 									}}
@@ -1080,12 +1138,14 @@ export default function GameSession({ slug }: { slug: string }) {
 												<div className="text-sm font-bold">
 													{formatScore(player.calculatedScore ?? 0)}
 												</div>
-								<div className="text-xs text-muted-foreground">
-									{/* If player hasn't finished, show LIVE; else show completion time */}
-									{(player.testCasesPassed ?? 0) >= (player.totalTestCases ?? Infinity)
-										? formatTime(player.completionTime ?? 0)
-										: (player.clientId === clientId ? `${gameTimer.getFormattedTime()} (LIVE)` : `In progress`)}
-								</div>
+					<div className="text-xs text-muted-foreground">
+						{/* If player hasn't finished, show REM; else show completion time */}
+						{(player.testCasesPassed ?? 0) >= (player.totalTestCases ?? Infinity)
+							? formatTime(player.completionTime ?? 0)
+							: player.clientId === clientId
+								? `${timeLeft !== null ? formatCountdown(timeLeft) : gameTimer.getFormattedTime()} REM`
+								: `In progress`}
+					</div>
 											</div>
 										</div>
 									))}
@@ -1148,6 +1208,14 @@ function difficultyBadgeClasses(difficulty: string) {
 	}
 }
 
+function formatCountdown(timeMs: number) {
+	const safeMs = Math.max(0, timeMs);
+	const totalSeconds = Math.ceil(safeMs / 1000);
+	const minutes = Math.floor(totalSeconds / 60);
+	const seconds = totalSeconds % 60;
+	return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
 function sanitizeLeetCodeHtml(html: string) {
 	return html
 		.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
@@ -1185,5 +1253,18 @@ function mapLangSlugToMonaco(langSlug: string | null) {
 			return "kotlin";
 		default:
 			return "javascript";
+	}
+}
+
+function getTimeLimitForDifficultyClient(difficulty: string | null | undefined) {
+	switch (difficulty?.toLowerCase()) {
+		case "easy":
+			return 5 * 60 * 1000;
+		case "medium":
+			return 10 * 60 * 1000;
+		case "hard":
+			return 15 * 60 * 1000;
+		default:
+			return 10 * 60 * 1000;
 	}
 }
