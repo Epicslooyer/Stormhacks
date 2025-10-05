@@ -80,6 +80,7 @@ export default function GameSession({ slug }: { slug: string }) {
 		}
 	}, [game?.status, resolvedSlug, router]);
 	const [copied, setCopied] = useState(false);
+	const [spectatorCopied, setSpectatorCopied] = useState(false);
 	const countdownSeconds =
 		countdownMs === null ? null : Math.ceil(countdownMs / 1000);
 	const problemSlug = game?.problemSlug ?? null;
@@ -934,6 +935,7 @@ export default function GameSession({ slug }: { slug: string }) {
 								</p>
 							</div>
 						)}
+					<div className="flex items-center gap-2">
 						<Button
 							variant="outline"
 							size="sm"
@@ -951,6 +953,24 @@ export default function GameSession({ slug }: { slug: string }) {
 						>
 							{copied ? "Copied!" : "Share game link"}
 						</Button>
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={async () => {
+								if (typeof window === "undefined") return;
+								const spectatorUrl = `${window.location.origin}/spectate/${resolvedSlug}`;
+								try {
+									await navigator.clipboard.writeText(spectatorUrl);
+									setSpectatorCopied(true);
+									setTimeout(() => setSpectatorCopied(false), 2000);
+								} catch (error) {
+									console.error("Failed to copy spectator link", error);
+								}
+							}}
+						>
+							{spectatorCopied ? "Copied!" : "Copy spectator link"}
+						</Button>
+					</div>
 					</div>
 				</div>
 			</header>
@@ -1159,29 +1179,29 @@ export default function GameSession({ slug }: { slug: string }) {
 								)}
 							</div>
 						)}
-						{gameWinner && false && (
-							<div className="rounded-xl border border-border bg-card p-4">
-								{gameWinner.isGameOver ? (
+					{gameWinner && false && (
+						<div className="rounded-xl border border-border bg-card p-4">
+							{gameWinner?.isGameOver ? (
 									<div className="text-center">
 										<h3 className="font-bold text-lg text-green-600">🏆 Game Over!</h3>
 										<p className="text-sm text-muted-foreground mt-1">
-											Winner: {gameWinner.winner?.playerName}
+										Winner: {gameWinner?.winner?.playerName}
 										</p>
 										<p className="text-sm font-medium">
-											Score: {formatScore(gameWinner.winner?.calculatedScore ?? 0)}
+										Score: {formatScore(gameWinner?.winner?.calculatedScore ?? 0)}
 										</p>
-									</div>
-								) : gameWinner.leader ? (
+							</div>
+							) : gameWinner?.leader ? (
 									<div className="text-center">
 										<h3 className="font-semibold">Current Leader</h3>
 										<p className="text-sm text-muted-foreground">
-											{gameWinner.leader.playerName}
+										{gameWinner?.leader?.playerName}
 										</p>
 										<p className="text-sm font-medium">
-											{formatScore(gameWinner.leader.calculatedScore ?? 0)}
+										{formatScore(gameWinner?.leader?.calculatedScore ?? 0)}
 										</p>
 										<p className="text-xs text-muted-foreground">
-											{gameWinner.activePlayersCount} players remaining
+										{gameWinner?.activePlayersCount} players remaining
 										</p>
 									</div>
 								) : null}
