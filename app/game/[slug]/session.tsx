@@ -396,7 +396,7 @@ export default function GameSession({ slug }: { slug: string }) {
 								Game starting in {countdownSeconds}s
 							</p>
 						)}
-						{game?.status === "lobby" && (
+						{game?.status === "lobby" && game?.mode !== "solo" && (
 							<p className="text-muted-foreground">
 								Waiting for the host to begin the game…
 							</p>
