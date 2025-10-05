@@ -1,5 +1,13 @@
 import Fuse from "fuse.js";
+import LeetCodeQuery from "leetcode-query";
+
 import data from "./problems.json";
+
+export const runtime = "nodejs";
+
+const leetCodeClient = new LeetCodeQuery();
+const tagCache = new Map<string, { tags: string[]; fetchedAt: number }>();
+const TAG_CACHE_TTL_MS = 1000 * 60 * 60 * 6; // 6 hours
 
 type Problem = {
 	id: number;
@@ -7,9 +15,39 @@ type Problem = {
 	slug: string;
 	difficulty: number;
 	frontend_id: number;
+	tags?: string[];
 };
 
-export const GET = (request: Request) => {
+async function getTagsForProblem(slug: string): Promise<string[] | undefined> {
+	if (!slug) return undefined;
+	const cached = tagCache.get(slug);
+	const now = Date.now();
+	if (cached && now - cached.fetchedAt < TAG_CACHE_TTL_MS) {
+		return cached.tags;
+	}
+
+	try {
+		const response = await leetCodeClient.problem(slug);
+		const tags = Array.isArray(response.topicTags)
+			? response.topicTags
+				.map((tag) =>
+					typeof tag?.name === "string" && tag.name.trim().length > 0
+						? tag.name.trim()
+						: typeof tag?.slug === "string"
+							? tag.slug.trim()
+							: null,
+				)
+				.filter((tag): tag is string => Boolean(tag))
+			: [];
+		tagCache.set(slug, { tags, fetchedAt: now });
+		return tags.length > 0 ? tags : undefined;
+	} catch (error) {
+		console.error(`Failed to load tags for ${slug}:`, error);
+		return undefined;
+	}
+}
+
+export const GET = async (request: Request) => {
 	// Get the search query from the URL
 	const url = new URL(request.url);
 	const query = url.searchParams.get("q") || "";
@@ -46,8 +84,15 @@ export const GET = (request: Request) => {
 		.slice(0, 10)
 		.map(({ item }) => item);
 
+	const withTags = await Promise.all(
+		results.map(async (problem) => ({
+			...problem,
+			tags: await getTagsForProblem(problem.slug),
+		})),
+	);
+
 	// Return the results
-	return new Response(JSON.stringify({ results }), {
+	return new Response(JSON.stringify({ results: withTags }), {
 		headers: { "Content-Type": "application/json" },
 	});
 };

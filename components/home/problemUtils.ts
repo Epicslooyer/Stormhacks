@@ -51,12 +51,52 @@ export function normalizeProblem(
 		typeof problem.difficulty === "number"
 			? problem.difficulty
 			: Number(problem.difficulty ?? 0);
+	const tags = extractTagLabels(problem);
 	return {
 		id,
 		slug,
 		title,
 		difficulty: difficultyLabel(difficultyValue),
+		tags,
 	};
+}
+
+function extractTagLabels(problem: Record<string, unknown>): string[] | undefined {
+	const candidate =
+		(Array.isArray(problem.tags) && problem.tags) ||
+		(Array.isArray(problem.topicTags) && problem.topicTags);
+
+	if (!candidate) return undefined;
+
+	const seen = new Set<string>();
+	const labels: string[] = [];
+
+	for (const entry of candidate as Array<unknown>) {
+		if (!entry) continue;
+		if (typeof entry === "string") {
+			const trimmed = entry.trim();
+			if (!trimmed || seen.has(trimmed)) continue;
+			seen.add(trimmed);
+			labels.push(trimmed);
+			continue;
+		}
+		if (typeof entry === "object") {
+			const name =
+				typeof (entry as { name?: unknown }).name === "string"
+					? ((entry as { name?: string }).name ?? "").trim()
+					: "";
+			const slug =
+				typeof (entry as { slug?: unknown }).slug === "string"
+					? ((entry as { slug?: string }).slug ?? "").trim()
+					: "";
+			const label = name || slug;
+			if (!label || seen.has(label)) continue;
+			seen.add(label);
+			labels.push(label);
+		}
+	}
+
+	return labels.length > 0 ? labels : undefined;
 }
 
 export function difficultyBadgeClassName(difficulty: string) {

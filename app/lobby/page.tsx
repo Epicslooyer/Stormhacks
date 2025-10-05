@@ -1,9 +1,26 @@
 import Link from "next/link";
+import { FiArrowRight } from "react-icons/fi";
+
 import CreateGameButton from "../game/CreateGameButton";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import { HomeBackdrop } from "@/components/home/HomeBackdrop";
+
+const steps = [
+	{
+		title: "Create or Join",
+		description: "Spin up a fresh lobby or drop into one with a shared code.",
+	},
+	{
+		title: "Get Ready",
+		description:
+			"Sync with your teammate, review the challenge, and click Ready Up.",
+	},
+	{
+		title: "Start Coding",
+		description:
+			"When everyone is locked in, launch the match and battle for the crown.",
+	},
+];
 
 export default function LobbyPage() {
 	return (
@@ -16,100 +33,162 @@ export default function LobbyPage() {
 		>
 			<HomeBackdrop />
 			<HomeHeader />
-			<main className="flex flex-1 flex-col gap-12 py-8 md:gap-20 md:py-16">
-				<div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-					<header className="space-y-3 text-center mb-8">
-						<h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-							Game Lobbies
-						</h1>
-						<p className="text-base text-muted-foreground sm:text-lg">
-							Create a lobby, invite your friends, and start coding together!
-						</p>
-					</header>
-					<div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-						{/* Create Lobby Card */}
-						<Card className="h-fit">
-							<CardHeader>
-								<CardTitle className="flex items-center gap-2">
-									<div className="w-2 h-2 bg-green-500 rounded-full"></div>
-									Create New Lobby
-								</CardTitle>
-							</CardHeader>
-							<CardContent className="space-y-4">
-								<p className="text-muted-foreground">
-									Start a new coding session and invite friends to join. Both players need to be ready before the game can begin.
+			<main className="flex flex-1 flex-col gap-14 py-10 md:gap-20 md:py-16">
+				<div className="mx-auto flex w-full max-w-6xl flex-col gap-14 px-4 sm:px-6 lg:px-8">
+					<section className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/90 p-6 shadow-[0_32px_64px_-42px_rgba(12,45,126,0.55)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/85 dark:shadow-[0_32px_64px_-38px_rgba(24,84,189,0.45)] md:p-10">
+						<div
+							className="pointer-events-none absolute inset-0 opacity-60"
+							style={{
+								backgroundImage:
+									"radial-gradient(700px at 10% 20%, rgba(247, 211, 84, 0.4), transparent 62%)",
+							}}
+						/>
+						<div
+							className="pointer-events-none absolute inset-0"
+							style={{
+								backgroundImage:
+									"radial-gradient(circle, rgba(64, 142, 255, 0.22), transparent 72%)",
+							}}
+						/>
+						<div className="relative flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
+							<div className="space-y-4 md:max-w-3xl">
+								<span className="inline-flex items-center rounded-full border border-amber-300/60 bg-amber-100/80 px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#0d2f6f] dark:border-amber-400/40 dark:bg-amber-400/20 dark:text-[#f8e7a3]">
+									Lobby arena
+								</span>
+								<h1 className="text-3xl font-semibold text-slate-900 dark:text-white md:text-4xl">
+									Game lobbies
+								</h1>
+								<p className="text-sm text-slate-600 dark:text-slate-300 md:text-base">
+									Summon your squad, storm the royale arena, and flex those
+									interview instincts before the crown is claimed.
 								</p>
-								<div className="flex justify-center">
-									<CreateGameButton redirectBase="/lobby" label="Create Lobby" />
+							</div>
+							<ul className="flex flex-col gap-3 text-xs font-semibold tracking-[0.14em] text-slate-400 dark:text-slate-500">
+								<li className="flex items-center gap-2 before:text-base before:text-amber-500 before:content-['⚔️']">
+									Draft your champions, lock in a problem, and clash for the
+									golden badge.
+								</li>
+								<li className="flex items-center gap-2 before:text-base before:text-sky-400 before:content-['🛡️']">
+									Ready checks are our shields—no contender enters the arena
+									unprepared.
+								</li>
+								<li className="flex items-center gap-2 before:text-base before:text-emerald-400 before:content-['👑']">
+									The crown goes to the squad that ships the cleanest interview
+									strat.
+								</li>
+							</ul>
+						</div>
+					</section>
+
+					<section className="grid gap-6 md:grid-cols-2">
+						<div className="relative overflow-hidden rounded-3xl border border-white/50 bg-white/80 p-6 shadow-[0_28px_70px_-32px_rgba(10,24,64,0.55)] backdrop-blur-xl transition hover:-translate-y-1 hover:shadow-[0_35px_90px_-35px_rgba(10,24,64,0.75)] dark:border-white/10 dark:bg-slate-950/75 dark:hover:shadow-[0_35px_90px_-30px_rgba(24,84,189,0.5)] md:p-8">
+							<div
+								className="pointer-events-none absolute inset-0 opacity-60"
+								style={{
+									backgroundImage:
+										"radial-gradient(480px at 15% 25%, rgba(247, 211, 84, 0.32), transparent 72%)",
+								}}
+							/>
+							<div className="relative flex flex-col gap-5">
+								<div className="flex items-center gap-3 text-[0.75rem] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-300">
+									<span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(74,222,128,0.65)]" />
+									Create new lobby
 								</div>
-							</CardContent>
-						</Card>
-						{/* Join Lobby Card */}
-						<Card className="h-fit">
-							<CardHeader>
-								<CardTitle className="flex items-center gap-2">
-									<div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-									Join Existing Lobby
-								</CardTitle>
-							</CardHeader>
-							<CardContent className="space-y-4">
-								<p className="text-muted-foreground">
-									Have a lobby code? Enter it directly in the address bar or use the link shared by your friend.
+								<p className="text-sm text-slate-600 dark:text-slate-300">
+									Start a fresh session and rally your crew. Everyone will need
+									to ready up before the countdown hits zero.
 								</p>
-								<div className="space-y-2">
-									<code className="block px-3 py-2 bg-muted rounded-md font-mono text-sm">
-										/lobby/your-lobby-id
-									</code>
-									<Link href="/lobby/example">
-										<Button variant="outline" className="w-full">
-											Try Example Lobby
-										</Button>
-									</Link>
-								</div>
-							</CardContent>
-						</Card>
-					</div>
-					{/* Features */}
-					<Card className="max-w-4xl mx-auto mt-12">
-						<CardHeader>
-							<CardTitle className="text-center">How It Works</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<div className="grid md:grid-cols-3 gap-6 text-center">
-								<div className="space-y-2">
-									<div className="w-12 h-12 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
-										<span className="text-2xl">1</span>
-									</div>
-									<h3 className="font-semibold">Create or Join</h3>
-									<p className="text-sm text-muted-foreground">
-										Create a new lobby or join an existing one using the lobby code
-									</p>
-								</div>
-								<div className="space-y-2">
-									<div className="w-12 h-12 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
-										<span className="text-2xl">2</span>
-									</div>
-									<h3 className="font-semibold">Get Ready</h3>
-									<p className="text-sm text-muted-foreground">
-										All players must click "Ready Up" before the game can start
-									</p>
-								</div>
-								<div className="space-y-2">
-									<div className="w-12 h-12 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
-										<span className="text-2xl">3</span>
-									</div>
-									<h3 className="font-semibold">Start Coding</h3>
-									<p className="text-sm text-muted-foreground">
-										Once all players are ready, the host can start the game
-									</p>
+								<div className="flex flex-wrap items-center gap-3">
+									<CreateGameButton
+										redirectBase="/lobby"
+										label="Create lobby"
+									/>
+									<span className="text-[0.65rem] uppercase tracking-[0.24em] text-slate-400 dark:text-slate-500">
+										Launch instantly
+									</span>
 								</div>
 							</div>
-						</CardContent>
-					</Card>
-					{/* Footer */}
-					<div className="text-center text-sm text-muted-foreground pb-8 mt-8">
-						<p>Ready to start coding together? Create your first lobby!</p>
-					</div>
+						</div>
+
+						<div className="relative overflow-hidden rounded-3xl border border-white/45 bg-white/75 p-6 shadow-[0_28px_70px_-32px_rgba(10,24,64,0.55)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/70 md:p-8">
+							<div
+								className="pointer-events-none absolute inset-0 opacity-50"
+								style={{
+									backgroundImage:
+										"radial-gradient(520px at 85% 65%, rgba(56, 189, 248, 0.24), transparent 70%)",
+								}}
+							/>
+							<div className="relative flex flex-col gap-5">
+								<div className="flex items-center gap-3 text-[0.75rem] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-300">
+									<span className="h-2.5 w-2.5 rounded-full bg-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.6)]" />
+									Join existing lobby
+								</div>
+								<p className="text-sm text-slate-600 dark:text-slate-300">
+									Already have a code? Paste it after{" "}
+									<code className="rounded-md bg-slate-900/90 px-1.5 py-0.5 text-[0.7rem] text-slate-100 dark:bg-slate-800/80">
+										/lobby/
+									</code>{" "}
+									in your browser and teleport straight to the arena.
+								</p>
+								<div className="rounded-xl border border-white/40 bg-white/70 px-4 py-3 font-mono text-sm text-slate-700 shadow-inner shadow-white/30 dark:border-white/15 dark:bg-slate-900/70 dark:text-slate-100">
+									/lobby/your-lobby-id
+								</div>
+								<div className="flex flex-wrap items-center justify-between gap-3">
+									<Link
+										href="/lobby/example"
+										className="group inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/70 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-white/80 hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300/70 dark:border-white/20 dark:bg-white/10 dark:text-slate-200 dark:hover:border-white/30 dark:hover:bg-white/15 dark:hover:text-white"
+									>
+										Try example lobby
+										<FiArrowRight className="transition-transform duration-200 group-hover:translate-x-1" />
+									</Link>
+									<span className="text-[0.65rem] uppercase tracking-[0.24em] text-slate-400 dark:text-slate-500">
+										Share codes via DM
+									</span>
+								</div>
+							</div>
+						</div>
+					</section>
+
+					<section className="relative overflow-hidden rounded-3xl border border-white/50 bg-white/85 p-6 shadow-[0_28px_70px_-32px_rgba(10,24,64,0.55)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/80 dark:shadow-[0_28px_70px_-28px_rgba(24,84,189,0.45)] md:p-10">
+						<div
+							className="pointer-events-none absolute inset-0 opacity-40"
+							style={{
+								backgroundImage:
+									"radial-gradient(520px at 12% 25%, rgba(56, 189, 248, 0.22), transparent 65%)",
+							}}
+						/>
+						<div className="relative grid gap-4 sm:grid-cols-3">
+							{steps.map((step, index) => (
+								<div
+									key={step.title}
+									className="group relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-white/50 bg-white/75 p-5 shadow-[0_18px_45px_-25px_rgba(10,24,64,0.5)] transition-transform duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_26px_70px_-32px_rgba(10,24,64,0.65)] dark:border-white/10 dark:bg-slate-950/70"
+								>
+									<div
+										className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+										style={{
+											backgroundImage:
+												"radial-gradient(420px at 85% 25%, rgba(247, 211, 84, 0.24), transparent 75%)",
+										}}
+									/>
+									<div className="relative flex h-11 w-11 items-center justify-center rounded-full border border-amber-300/60 bg-amber-200/30 text-base font-semibold text-[#0d2f6f] shadow-inner dark:border-amber-400/40 dark:bg-amber-400/20 dark:text-[#f8e7a3]">
+										{index + 1}
+									</div>
+									<div className="relative space-y-2">
+										<h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+											{step.title}
+										</h3>
+										<p className="text-sm text-slate-600 dark:text-slate-300">
+											{step.description}
+										</p>
+									</div>
+								</div>
+							))}
+						</div>
+					</section>
+
+					<footer className="self-center text-center text-xs uppercase tracking-[0.24em] text-slate-400 dark:text-slate-500">
+						Claim your crown? Forge the first lobby and let the royale begin.
+					</footer>
 				</div>
 			</main>
 		</div>

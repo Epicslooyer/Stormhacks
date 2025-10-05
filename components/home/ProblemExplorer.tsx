@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useMutation } from "convex/react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -19,13 +20,10 @@ import {
 	normalizeProblem,
 } from "./problemUtils";
 import type { ProblemOption } from "./types";
-
-const difficultyTaglines: Record<string, string> = {
-	Easy: "Warm up with a quick win and build momentum.",
-	Medium: "Plot the strategy together and keep the pace steady.",
-	Hard: "Rally the crew for a high-intensity challenge.",
-	default: "Sharpen your skills and sync up with teammates in seconds.",
-};
+import {
+	prefetchProblemDetails,
+	useProblemDetails,
+} from "@/components/useProblemDetails";
 
 export function ProblemExplorer({ sectionId }: { sectionId: string }) {
 	const router = useRouter();
@@ -39,12 +37,25 @@ export function ProblemExplorer({ sectionId }: { sectionId: string }) {
 		null,
 	);
 	const searchInputId = useId();
+	const queryClient = useQueryClient();
 
 	const hasSearch = query.trim().length >= 2;
 	const problems = useMemo(
 		() => (hasSearch ? results : featuredProblems),
 		[hasSearch, results],
 	);
+
+	useEffect(() => {
+		const problemsNeedingTags = featuredProblems.filter(
+			(problem) => !Array.isArray(problem.tags) || problem.tags.length === 0,
+		);
+		if (problemsNeedingTags.length === 0) return;
+		void Promise.all(
+			problemsNeedingTags.map((problem) =>
+				prefetchProblemDetails(queryClient, problem.slug),
+			),
+		);
+	}, [queryClient]);
 
 	useEffect(() => {
 		const trimmed = query.trim();
@@ -225,14 +236,47 @@ function ProblemCard({
 	isLoading,
 	isDisabled,
 }: {
-	problem: ProblemOption;
-	onPreview: () => void;
-	onStart: () => void;
-	isLoading: boolean;
-	isDisabled: boolean;
+ 	problem: ProblemOption;
+ 	onPreview: () => void;
+ 	onStart: () => void;
+ 	isLoading: boolean;
+ 	isDisabled: boolean;
 }) {
-	const tagline =
-		difficultyTaglines[problem.difficulty] ?? difficultyTaglines.default;
+	const presetTags = Array.isArray(problem.tags) ? problem.tags : undefined;
+	const shouldFetchDetails = !presetTags || presetTags.length === 0;
+	const { data: details, isPending: tagsPending } = useProblemDetails(
+		shouldFetchDetails ? problem.slug : null,
+	);
+	const topicTags = useMemo(() => {
+		const fromProblem = (presetTags ?? []).map((tag) => tag.trim()).filter(Boolean);
+		if (fromProblem.length > 0) {
+			return dedupeTags(fromProblem).slice(0, 3);
+		}
+		const rawTags = Array.isArray(details?.topicTags)
+			? (details?.topicTags as Array<
+					| { name?: string | null; slug?: string | null }
+					| null
+					| undefined
+			>)
+			: [];
+		const labels: string[] = [];
+		const seen = new Set<string>();
+		for (const tag of rawTags) {
+			if (!tag) continue;
+			const name =
+				typeof tag.name === "string" && tag.name.trim().length > 0
+					? tag.name.trim()
+					: typeof tag.slug === "string" && tag.slug.trim().length > 0
+						? tag.slug.trim()
+						: "";
+			if (!name || seen.has(name)) continue;
+			seen.add(name);
+			labels.push(name);
+			if (labels.length === 3) break;
+		}
+		return labels;
+	}, [problem.tags, presetTags, details?.topicTags]);
+	const showTagsLoading = shouldFetchDetails && tagsPending && topicTags.length === 0;
 
 	return (
 		<li className="group relative flex flex-col gap-5 overflow-hidden rounded-3xl border border-amber-200/40 bg-gradient-to-br from-white/95 via-white/85 to-white/70 p-6 shadow-[0_22px_55px_-28px_rgba(10,26,68,0.55)] backdrop-blur-xl transition-transform duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_35px_80px_-30px_rgba(10,26,68,0.75)] focus-within:-translate-y-1 focus-within:shadow-[0_35px_80px_-30px_rgba(10,26,68,0.75)] dark:border-amber-400/25 dark:from-slate-950/75 dark:via-slate-950/65 dark:to-slate-900/55">
@@ -245,9 +289,22 @@ function ProblemCard({
 					<h3 className="text-lg font-semibold text-slate-900 transition-colors group-hover:text-slate-950 dark:text-white dark:group-hover:text-white">
 						{problem.title}
 					</h3>
-					<p className="text-sm text-slate-500 dark:text-slate-400">
-						{tagline}
-					</p>
+					{showTagsLoading ? (
+						<p className="text-xs text-slate-400 dark:text-slate-500">
+							Loading topics…
+						</p>
+					) : topicTags.length > 0 ? (
+						<div className="flex flex-wrap gap-2">
+							{topicTags.map((tag) => (
+								<Badge
+									key={tag}
+									className="rounded-full border border-amber-300/60 bg-amber-100/80 px-2.5 py-1 text-xs font-medium text-[#0d2f6f] dark:border-amber-400/40 dark:bg-amber-400/20 dark:text-[#f8e7a3]"
+								>
+									{tag}
+								</Badge>
+							))}
+						</div>
+					) : null}
 				</div>
 
 				<Badge
@@ -290,4 +347,16 @@ function ProblemCard({
 			</div>
 		</li>
 	);
+}
+
+function dedupeTags(tags: string[]): string[] {
+	const seen = new Set<string>();
+	const result: string[] = [];
+	for (const tag of tags) {
+		const trimmed = tag.trim();
+		if (!trimmed || seen.has(trimmed)) continue;
+		seen.add(trimmed);
+		result.push(trimmed);
+	}
+	return result;
 }

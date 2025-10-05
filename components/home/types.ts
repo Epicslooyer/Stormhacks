@@ -3,4 +3,5 @@ export type ProblemOption = {
 	title: string;
 	slug: string;
 	difficulty: string;
+	tags?: string[];
 };

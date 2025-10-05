@@ -1,5 +1,3 @@
-"use client";
-
 export function HomeBackdrop() {
 	return (
 		<div
@@ -8,11 +6,17 @@ export function HomeBackdrop() {
 		>
 			<div
 				className="absolute inset-0"
-				style={{ backgroundImage: "var(--home-backdrop-top)", filter: "blur(0px)" }}
+				style={{
+					backgroundImage: "var(--home-backdrop-top)",
+					filter: "blur(0px)",
+				}}
 			/>
 			<div
 				className="absolute inset-0"
-				style={{ backgroundImage: "var(--home-backdrop-bottom)", filter: "blur(2px)" }}
+				style={{
+					backgroundImage: "var(--home-backdrop-bottom)",
+					filter: "blur(2px)",
+				}}
 			/>
 			<div
 				className="absolute inset-0"
