@@ -1,6 +1,7 @@
 "use client";
 
 import { useTestCases, type TestCase, type TestCasesResponse } from "./useTestCases";
+import { CodeExecutor } from "./CodeExecutor";
 import { useState } from "react";
 
 interface TestCasesDisplayProps {
@@ -21,6 +22,7 @@ export function TestCasesDisplay({ problemSlug }: TestCasesDisplayProps) {
   const testCasesData = testCases as TestCasesResponse | null;
 
   const [expandedTestCase, setExpandedTestCase] = useState<number | null>(null);
+  const [showExecutor, setShowExecutor] = useState(false);
 
   if (isLoading) {
     return (
@@ -41,7 +43,7 @@ export function TestCasesDisplay({ problemSlug }: TestCasesDisplayProps) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Test Cases</h3>
-        <p className="text-red-600">{error?.message || "An unknown error occurred"}</p>
+        <p className="text-red-600">{String(error) || "An unknown error occurred"}</p>
       </div>
     );
   }
@@ -77,10 +79,27 @@ export function TestCasesDisplay({ problemSlug }: TestCasesDisplayProps) {
         <h3 className="text-lg font-semibold text-gray-800">
           Test Cases ({testCasesData.testCases.length})
         </h3>
-        <div className="text-sm text-gray-500">
-          Generated {new Date(testCasesData.createdAt).toLocaleDateString()}
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setShowExecutor(!showExecutor)}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+          >
+            {showExecutor ? "Hide" : "Show"} Code Executor
+          </button>
+          <div className="text-sm text-gray-500">
+            Generated {new Date(testCasesData.createdAt).toLocaleDateString()}
+          </div>
         </div>
       </div>
+
+      {showExecutor && (
+        <div className="mb-6">
+          <CodeExecutor 
+            testCases={testCasesData.testCases} 
+            problemSlug={problemSlug} 
+          />
+        </div>
+      )}
 
       <div className="space-y-3">
         {testCasesData.testCases.map((testCase: TestCase, index: number) => (

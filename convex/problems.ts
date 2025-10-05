@@ -46,3 +46,19 @@ export const createOrUpdateTestCases = mutation({
     }
   },
 });
+
+export const deleteTestCases = mutation({
+  args: { problemSlug: v.string() },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("testCases")
+      .withIndex("by_problem_slug", (q) => q.eq("problemSlug", args.problemSlug))
+      .first();
+
+    if (existing) {
+      await ctx.db.delete(existing._id);
+      return true;
+    }
+    return false;
+  },
+});
