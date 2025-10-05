@@ -1,89 +1,47 @@
 "use client";
 
 import { useAuthActions } from "@convex-dev/auth/react";
-import { Button, Container, Flex, Heading, HStack, Link as ChakraLink } from "@chakra-ui/react";
 import { useConvexAuth } from "convex/react";
-import NextLink from "next/link";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useColorModeValue } from "@/components/ui/color-mode";
+import { Button } from "@/components/ui/button";
 
 export function HomeHeader() {
-	const headerBg = useColorModeValue("rgba(255, 255, 255, 0.92)", "rgba(17, 17, 25, 0.8)");
-	const headerBorder = useColorModeValue("whiteAlpha.500", "whiteAlpha.200");
-	const navColor = useColorModeValue("gray.600", "gray.300");
-	const navHover = useColorModeValue("gray.900", "white");
-
 	return (
-		<Flex
-			as="header"
-			position="sticky"
-			top={0}
-			zIndex={10}
-			bg={headerBg}
-			backdropFilter="saturate(180%) blur(14px)"
-			borderBottomWidth="1px"
-			borderColor={headerBorder}
-			boxShadow="sm"
-		>
-			<Container
-				maxW="6xl"
-				py={{ base: 3, md: 4 }}
-				display="flex"
-				alignItems="center"
-				justifyContent="space-between"
-				gap={6}
-			>
-					<Heading
-						as={NextLink}
-						href="/"
-						size="md"
-						fontWeight="semibold"
-						letterSpacing="tight"
-						bgGradient="linear(to-r, purple.500, pink.400)"
-						bgClip="text"
+		<header className="sticky top-0 z-10 border-b border-white/60 bg-white/90 backdrop-blur-xl shadow-sm dark:border-white/20 dark:bg-slate-950/80">
+			<div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-4 py-3 sm:px-6 md:py-4">
+				<Link
+					className="text-lg font-semibold tracking-tight bg-gradient-to-r from-purple-500 to-pink-400 bg-clip-text text-transparent"
+					href="/"
+				>
+					Leet Royale
+				</Link>
+				<nav
+					aria-label="Primary"
+					className="hidden items-center gap-6 text-sm font-medium sm:flex"
+				>
+					<Link
+						className="text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+						href="/problems"
 					>
-						Leet Royale
-					</Heading>
-					<HStack
-						as="nav"
-						aria-label="Primary"
-						gap={{ base: 4, md: 6 }}
-						display={{ base: "none", sm: "flex" }}
+						Problems
+					</Link>
+					<Link
+						className="text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+						href="/lobby"
 					>
-						<ChakraLink
-							as={NextLink}
-							href="/problems"
-							fontSize="sm"
-							fontWeight="medium"
-							color={navColor}
-							_hover={{ color: navHover }}
-						>
-							Problems
-						</ChakraLink>
-						<ChakraLink
-							as={NextLink}
-							href="/lobby"
-							fontSize="sm"
-							fontWeight="medium"
-							color={navColor}
-							_hover={{ color: navHover }}
-						>
-							Lobbies
-						</ChakraLink>
-						<ChakraLink
-							as={NextLink}
-							href="/spectate"
-							fontSize="sm"
-							fontWeight="medium"
-							color={navColor}
-							_hover={{ color: navHover }}
-						>
-							Spectate
-						</ChakraLink>
-					</HStack>
+						Lobbies
+					</Link>
+					<Link
+						className="text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+						href="/spectate"
+					>
+						Spectate
+					</Link>
+				</nav>
 				<SignOutButton />
-			</Container>
-		</Flex>
+			</div>
+		</header>
 	);
 }
 
@@ -96,13 +54,9 @@ function SignOutButton() {
 
 	return (
 		<Button
+			type="button"
 			size="sm"
-			variant="subtle"
-			colorPalette="purple"
-			fontWeight="semibold"
-			bgGradient="linear(to-r, purple.500, pink.400)"
-			color="white"
-			_hover={{ bgGradient: "linear(to-r, purple.600, pink.500)" }}
+			className="bg-gradient-to-r from-purple-500 to-pink-400 text-white shadow hover:from-purple-600 hover:to-pink-500"
 			onClick={() =>
 				void signOut().then(() => {
 					router.push("/signin");

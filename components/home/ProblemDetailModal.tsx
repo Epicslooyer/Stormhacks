@@ -1,32 +1,26 @@
 "use client";
 
+import Link from "next/link";
+import { useId, useMemo } from "react";
+
+import { Badge } from "@/components/ui/badge";
 import {
-	Badge,
-	Box,
-	Button,
-	DialogBackdrop,
-	DialogBody,
-	DialogCloseTrigger,
+	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
-	DialogPositioner,
-	DialogRoot,
-	Flex,
-	Heading,
-	HStack,
-	Spinner,
-	Stack,
-	Text,
-} from "@chakra-ui/react";
-import { useId, useMemo } from "react";
+	DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useProblemDetails } from "@/components/useProblemDetails";
-import { useColorModeValue } from "@/components/ui/color-mode";
-import type { ProblemOption } from "./types";
 import {
-	difficultyBadgePalette,
+	difficultyBadgeClassName,
 	sanitizeLeetCodeHtml,
 } from "./problemUtils";
+import type { ProblemOption } from "./types";
+import { Loader2 } from "lucide-react";
 
 export function ProblemDetailModal({
 	isOpen,
@@ -41,12 +35,6 @@ export function ProblemDetailModal({
 	const titleId = useId();
 	const contentId = useId();
 
-	const helperColor = useColorModeValue("gray.600", "gray.400");
-	const modalBodyText = useColorModeValue("gray.700", "gray.200");
-	const tagBg = useColorModeValue("purple.50", "whiteAlpha.200");
-	const tagColor = useColorModeValue("purple.700", "purple.200");
-	const modalBg = useColorModeValue("white", "gray.900");
-
 	let parsedStats: Record<string, unknown> | null = null;
 	if (data?.stats) {
 		try {
@@ -56,16 +44,11 @@ export function ProblemDetailModal({
 		}
 	}
 
-	const acceptance =
-		typeof parsedStats?.acRate === "string" ? parsedStats.acRate : null;
+	const acceptance = typeof parsedStats?.acRate === "string" ? parsedStats.acRate : null;
 	const totalSubmissions =
-		typeof parsedStats?.totalSubmission === "number"
-			? parsedStats.totalSubmission
-			: null;
+		typeof parsedStats?.totalSubmission === "number" ? parsedStats.totalSubmission : null;
 	const totalAccepted =
-		typeof parsedStats?.totalAccepted === "number"
-			? parsedStats.totalAccepted
-			: null;
+		typeof parsedStats?.totalAccepted === "number" ? parsedStats.totalAccepted : null;
 	const modalError = error instanceof Error ? error.message : "Unknown error";
 	const topicTags = data?.topicTags ?? [];
 	const contentHtml =
@@ -78,167 +61,86 @@ export function ProblemDetailModal({
 	if (!problem) return null;
 
 	return (
-		<DialogRoot
-			open={isOpen}
-			onOpenChange={(details) => {
-				if (!details.open) onClose();
-			}}
-		>
-			<DialogBackdrop backdropFilter="blur(8px)" bg="blackAlpha.700" />
-			<DialogPositioner px={4}>
-				<DialogContent
-					aria-labelledby={titleId}
-					aria-describedby={contentId}
-					maxW="3xl"
-					w="full"
-					maxH="85vh"
-					borderRadius="2xl"
-					bg={modalBg}
-					shadow="2xl"
-					p={{ base: 5, md: 6 }}
-					display="flex"
-					flexDirection="column"
-					gap={6}
-				>
-					<DialogCloseTrigger
-						aria-label="Close problem details"
-						position="absolute"
-						top={4}
-						right={4}
-					/>
-					<DialogHeader p={0}>
-						<Stack gap={3}>
-							<Stack gap={1}>
-								<Heading id={titleId} size="lg" lineHeight="tight">
-									{data?.title ?? problem.title}
-								</Heading>
-								<Text fontSize="sm" color={helperColor}>
-									{problem.slug}
-								</Text>
-							</Stack>
-							<HStack gap={2} flexWrap="wrap" fontSize="xs" color={helperColor}>
-								<Badge
-									variant="solid"
-									colorPalette={difficultyBadgePalette(
-										data?.difficulty ?? problem.difficulty,
-									)}
-									fontWeight="semibold"
-									textTransform="uppercase"
-									px={2.5}
-									py={1}
-									borderRadius="md"
-								>
-									{data?.difficulty ?? problem.difficulty}
-								</Badge>
-								{acceptance && <Text>Acceptance: {acceptance}</Text>}
-								{typeof data?.likes === "number" && <Text>Likes: {data.likes}</Text>}
-								{typeof data?.dislikes === "number" && (
-									<Text>Dislikes: {data.dislikes}</Text>
-								)}
-							</HStack>
-						</Stack>
-					</DialogHeader>
-					<DialogBody
-						id={contentId}
-						display="flex"
-						flexDirection="column"
-						gap={4}
-						color={modalBodyText}
-						p={0}
-					>
+		<Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+			<DialogContent
+				aria-labelledby={titleId}
+				aria-describedby={contentId}
+				className="max-h-[85vh] max-w-3xl gap-6 overflow-hidden rounded-2xl border border-white/10 bg-white/95 p-6 shadow-2xl backdrop-blur dark:bg-slate-950/95"
+			>
+				<DialogHeader className="gap-3">
+					<div className="space-y-2">
+						<DialogTitle id={titleId} className="text-2xl font-semibold text-slate-900 dark:text-white">
+							{data?.title ?? problem.title}
+						</DialogTitle>
+						<DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
+							{problem.slug}
+						</DialogDescription>
+					</div>
+					<div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+						<Badge className={cn("rounded-md border px-2.5 py-1 font-semibold uppercase", difficultyBadgeClassName(data?.difficulty ?? problem.difficulty))}>
+							{data?.difficulty ?? problem.difficulty}
+						</Badge>
+						{acceptance && <span>Acceptance: {acceptance}</span>}
+						{typeof data?.likes === "number" && <span>Likes: {data.likes}</span>}
+						{typeof data?.dislikes === "number" && <span>Dislikes: {data.dislikes}</span>}
+					</div>
+				</DialogHeader>
+				<div id={contentId} className="flex flex-1 flex-col gap-4 overflow-y-auto pr-1 text-sm text-slate-700 dark:text-slate-200">
 					{isPending && (
-						<Flex align="center" gap={2} color={helperColor}>
-								<Spinner size="sm" />
-								<Text fontSize="sm">Loading problem details…</Text>
-							</Flex>
-						)}
-						{isError && !isPending && (
-							<Text fontSize="sm" color="red.500">
-								Failed to load problem details: {modalError}
-							</Text>
-						)}
-						{!isPending && !isError && (
-							<Stack gap={4}>
-								{topicTags.length > 0 && (
-									<HStack gap={2} flexWrap="wrap">
-										{topicTags.map((tag) => (
-											<Badge
-												key={String(tag?.slug ?? tag?.name)}
-												bg={tagBg}
-												color={tagColor}
-												fontSize="xs"
-												borderRadius="full"
-											>
-												{String(tag?.name ?? tag?.slug)}
-											</Badge>
-										))}
-									</HStack>
-								)}
-								{(totalSubmissions !== null || totalAccepted !== null) && (
-									<Text fontSize="xs" color={helperColor}>
-										{totalAccepted !== null &&
-											`Accepted: ${totalAccepted.toLocaleString()} · `}
-										{totalSubmissions !== null &&
-											`Submissions: ${totalSubmissions.toLocaleString()}`}
-									</Text>
-								)}
-								<ModalContentBody sanitizedContent={sanitizedContent} />
-							</Stack>
-						)}
-					</DialogBody>
-					<DialogFooter
-						display="flex"
-						justifyContent="space-between"
-						gap={3}
-						p={0}
-					>
-					<Button
-						as="a"
-						href={`https://leetcode.com/problems/${problem.slug}/`}
-						target="_blank"
-						rel="noreferrer"
-						variant="subtle"
-						colorPalette="purple"
-					>
+						<div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+							<Loader2 className="h-4 w-4 animate-spin" />
+							<span>Loading problem details…</span>
+						</div>
+					)}
+					{isError && !isPending && (
+						<p className="text-sm text-rose-500">
+							Failed to load problem details: {modalError}
+						</p>
+					)}
+					{!isPending && !isError && (
+						<div className="space-y-4">
+							{topicTags.length > 0 && (
+								<div className="flex flex-wrap items-center gap-2">
+									{topicTags.map((tag) => (
+										<Badge
+											key={String(tag?.slug ?? tag?.name)}
+											variant="secondary"
+											className="rounded-full border border-purple-200/50 bg-purple-50/70 px-3 py-1 text-xs font-medium text-purple-700 dark:border-purple-500/30 dark:bg-purple-500/15 dark:text-purple-100"
+										>
+											{String(tag?.name ?? tag?.slug)}
+										</Badge>
+									))}
+								</div>
+							)}
+							{(totalSubmissions !== null || totalAccepted !== null) && (
+								<p className="text-xs text-slate-500 dark:text-slate-400">
+									{totalAccepted !== null && `Accepted: ${totalAccepted.toLocaleString()} · `}
+									{totalSubmissions !== null && `Submissions: ${totalSubmissions.toLocaleString()}`}
+								</p>
+							)}
+							<ModalContentBody sanitizedContent={sanitizedContent} />
+						</div>
+					)}
+				</div>
+				<DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+					<Button asChild variant="outline" className="order-2 sm:order-1">
+						<Link href={`https://leetcode.com/problems/${problem.slug}/`} target="_blank" rel="noreferrer">
 							Open on LeetCode
-						</Button>
-						<Button onClick={onClose} colorPalette="gray" variant="subtle">
-							Close
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</DialogPositioner>
-		</DialogRoot>
+						</Link>
+					</Button>
+					<Button onClick={onClose} className="order-1 bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600">
+						Close
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	);
 }
 
 function ModalContentBody({ sanitizedContent }: { sanitizedContent: string }) {
-	const codeBlockBg = useColorModeValue("gray.100", "gray.800");
-
 	return (
-		<Box
-			fontSize="sm"
-			lineHeight="tall"
-			css={{
-				"& > *:not(:last-child)": { marginBottom: 12 },
-				"& h1, & h2, & h3": {
-					fontWeight: "semibold",
-					marginTop: 16,
-				},
-				"& ul, & ol": {
-					paddingInlineStart: 20,
-					marginBottom: 12,
-				},
-				"& pre": {
-					padding: 12,
-					borderRadius: 12,
-					overflowX: "auto",
-					bg: codeBlockBg,
-				},
-				"& code": {
-					fontFamily: "mono",
-				},
-			}}
+		<div
+			className="text-sm leading-7 text-slate-700 dark:text-slate-200 space-y-4 [&_h1]:text-lg [&_h1]:font-semibold [&_h1]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:mt-4 [&_h4]:text-sm [&_h4]:font-semibold [&_h4]:mt-4 [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:space-y-1 [&_ol]:pl-4 [&_pre]:rounded-xl [&_pre]:bg-slate-900/85 [&_pre]:p-4 [&_pre]:text-slate-100 [&_code]:font-mono"
 			// biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized LeetCode problem markup
 			dangerouslySetInnerHTML={{ __html: sanitizedContent }}
 		/>

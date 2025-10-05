@@ -1,6 +1,5 @@
 "use client";
 
-import { Box, Container, Flex } from "@chakra-ui/react";
 import { useColorModeValue } from "@/components/ui/color-mode";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import { HeroSection } from "@/components/home/HeroSection";
@@ -10,34 +9,24 @@ import { useId } from "react";
 
 export default function HomePage() {
 	const pageGradient = useColorModeValue(
-		"linear(to-b, purple.50, white)",
-		"linear(to-b, gray.900, purple.900)",
+		"linear-gradient(to bottom, rgba(237, 233, 254, 0.9), #ffffff)",
+		"linear-gradient(to bottom, rgba(15, 23, 42, 0.95), rgba(76, 29, 149, 0.85))",
 	);
 	const explorerId = useId();
 
 	return (
-		<Flex
-			direction="column"
-			minH="100dvh"
-			position="relative"
-			overflow="hidden"
-			bgGradient={pageGradient}
+		<div
+			className="relative flex min-h-screen flex-col overflow-hidden"
+			style={{ backgroundImage: pageGradient }}
 		>
 			<HomeBackdrop />
 			<HomeHeader />
-			<Box
-				as="main"
-				flex="1"
-				py={{ base: 8, md: 16 }}
-				display="flex"
-				flexDirection="column"
-				gap={{ base: 12, md: 20 }}
-			>
+			<main className="flex flex-1 flex-col gap-12 py-8 md:gap-20 md:py-16">
 				<HeroSection explorerId={explorerId} />
-				<Container maxW="6xl">
+				<div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
 					<ProblemExplorer sectionId={explorerId} />
-				</Container>
-			</Box>
-		</Flex>
+				</div>
+			</main>
+		</div>
 	);
 }

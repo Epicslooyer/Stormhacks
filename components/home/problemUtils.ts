@@ -39,16 +39,16 @@ export function normalizeProblem(problem: Record<string, unknown>): ProblemOptio
 	};
 }
 
-export function difficultyBadgePalette(difficulty: string) {
+export function difficultyBadgeClassName(difficulty: string) {
 	switch (difficulty) {
 		case "Easy":
-			return "teal";
+			return "border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/20 dark:text-emerald-100";
 		case "Medium":
-			return "orange";
+			return "border-amber-200 bg-amber-100 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-100";
 		case "Hard":
-			return "red";
+			return "border-rose-200 bg-rose-100 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/20 dark:text-rose-100";
 		default:
-			return "gray";
+			return "border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-600/50 dark:bg-slate-700/40 dark:text-slate-100";
 	}
 }
 

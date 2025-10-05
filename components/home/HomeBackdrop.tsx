@@ -1,6 +1,5 @@
 "use client";
 
-import { Box } from "@chakra-ui/react";
 import { useColorModeValue } from "@/components/ui/color-mode";
 
 export function HomeBackdrop() {
@@ -18,17 +17,13 @@ export function HomeBackdrop() {
 	);
 
 	return (
-		<Box
+		<div
 			aria-hidden
-			position="absolute"
-			inset={0}
-			overflow="hidden"
-			pointerEvents="none"
-			mixBlendMode="screen"
+			className="pointer-events-none absolute inset-0 overflow-hidden mix-blend-screen"
 		>
-			<Box position="absolute" inset={0} backgroundImage={glowTop} filter="blur(0px)" />
-			<Box position="absolute" inset={0} backgroundImage={glowBottom} filter="blur(2px)" />
-			<Box position="absolute" inset={0} backgroundImage={glowCenter} filter="blur(0px)" opacity={0.9} />
-		</Box>
+			<div className="absolute inset-0" style={{ backgroundImage: glowTop, filter: "blur(0px)" }} />
+			<div className="absolute inset-0" style={{ backgroundImage: glowBottom, filter: "blur(2px)" }} />
+			<div className="absolute inset-0" style={{ backgroundImage: glowCenter, filter: "blur(0px)", opacity: 0.9 }} />
+		</div>
 	);
 }

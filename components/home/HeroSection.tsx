@@ -1,30 +1,11 @@
 "use client";
 
-import {
-	Box,
-	Button,
-	Container,
-	Heading,
-	HStack,
-	Icon,
-	SimpleGrid,
-	Stack,
-	Text,
-} from "@chakra-ui/react";
-import NextLink from "next/link";
+import Link from "next/link";
 import { FiArrowRight, FiClock, FiUsers, FiZap } from "react-icons/fi";
 import { useColorModeValue } from "@/components/ui/color-mode";
+import { Button } from "@/components/ui/button";
 
 export function HeroSection({ explorerId }: { explorerId: string }) {
-	const subtext = useColorModeValue("gray.600", "gray.300");
-	const pillBg = useColorModeValue("whiteAlpha.700", "whiteAlpha.200");
-	const pillText = useColorModeValue("purple.600", "purple.100");
-	const featureBg = useColorModeValue("whiteAlpha.900", "whiteAlpha.100");
-	const featureBorder = useColorModeValue("whiteAlpha.700", "whiteAlpha.200");
-	const featureColor = useColorModeValue("gray.700", "gray.200");
-	const secondaryButtonColor = useColorModeValue("gray.800", "gray.100");
-	const secondaryButtonHover = useColorModeValue("gray.900", "white");
-
 	const features = [
 		{
 			icon: FiUsers,
@@ -42,118 +23,67 @@ export function HeroSection({ explorerId }: { explorerId: string }) {
 			description: "Keep the pace with lobby timers and built-in scoring tools.",
 		},
 	];
+	const heroGradient = useColorModeValue(
+		"linear-gradient(to bottom right, rgba(255,255,255,0.92), rgba(236, 201, 255, 0.55))",
+		"linear-gradient(to bottom right, rgba(48, 25, 52, 0.85), rgba(76, 29, 149, 0.65))",
+	);
 
 	return (
-		<Container maxW="6xl" py={{ base: 10, md: 18 }} position="relative">
-			<Box
-				position="relative"
-				display="flex"
-				flexDirection="column"
-				alignItems="center"
-				gap={{ base: 6, md: 10 }}
-				overflow="hidden"
-				borderRadius="4xl"
-				px={{ base: 6, md: 12 }}
-				py={{ base: 10, md: 16 }}
-				bgGradient={useColorModeValue(
-					"linear(to-br, rgba(255,255,255,0.9), rgba(236, 201, 255, 0.55))",
-					"linear(to-br, rgba(48, 25, 52, 0.8), rgba(76, 29, 149, 0.65))",
-				)}
-				boxShadow="2xl"
+		<section className="relative mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 md:py-18 lg:px-8">
+			<div
+				className="relative flex flex-col items-center gap-6 overflow-hidden rounded-[2.5rem] px-6 py-10 shadow-2xl sm:gap-10 sm:px-10 sm:py-14 md:px-12 lg:px-16"
+				style={{ backgroundImage: heroGradient }}
 			>
-				<Box
-					position="absolute"
-					inset={0}
-					bgImage="radial-gradient(circle at 20% 20%, rgba(255,255,255,0.4), transparent 55%)"
-					opacity={0.6}
-					pointerEvents="none"
-				/>
-				<Stack gap={4} textAlign="center" alignItems="center" maxW="3xl" position="relative">
-					<Text
-						fontSize="xs"
-						fontWeight="medium"
-						bg={pillBg}
-						color={pillText}
-						px={4}
-						py={1.5}
-						borderRadius="full"
-						letterSpacing="wide"
-						textTransform="uppercase"
-					>
+				<div className="pointer-events-none absolute inset-0 opacity-60" style={{ backgroundImage: "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.4), transparent 55%)" }} />
+				<div className="relative flex max-w-3xl flex-col items-center gap-4 text-center">
+					<p className="inline-flex items-center rounded-full bg-white/70 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-purple-600 dark:bg-white/20 dark:text-purple-100">
 						Collaborative coding sessions made effortless
-					</Text>
-					<Heading size={{ base: "2xl", md: "3xl" }} lineHeight="tight">
+					</p>
+					<h2 className="text-3xl font-semibold leading-tight text-slate-900 dark:text-white md:text-5xl">
 						Pick a problem, gather your squad, and battle in real time.
-					</Heading>
-					<Text fontSize={{ base: "sm", md: "md" }} color={subtext} maxW="2xl">
-						Search the LeetCode problem set or start quickly with a curated spotlight.
-						We spin up a shared lobby and keep everyone in sync from countdown to victory.
-					</Text>
-					<HStack gap={{ base: 3, md: 5 }} justify="center" flexWrap="wrap">
+					</h2>
+					<p className="max-w-2xl text-sm text-slate-600 dark:text-slate-300 md:text-base">
+						Search the LeetCode problem set or start quickly with a curated spotlight. We spin up a shared lobby and keep everyone in sync from countdown to victory.
+					</p>
+					<div className="flex flex-wrap items-center justify-center gap-3 md:gap-5">
 						<Button
-							as={NextLink}
-							href={`#${explorerId}`}
-							size={{ base: "md", md: "lg" }}
-							colorPalette="purple"
-							bgGradient="linear(to-r, purple.500, pink.400)"
-							color="white"
-							rightIcon={<FiArrowRight />}
-							shadow="lg"
-							_hover={{ bgGradient: "linear(to-r, purple.600, pink.500)" }}
+							asChild
+							className="bg-gradient-to-r from-purple-500 to-pink-400 text-white shadow-lg hover:from-purple-600 hover:to-pink-500"
+							size="lg"
 						>
-							Start a quick lobby
+							<Link href={`#${explorerId}`} className="inline-flex items-center gap-2">
+								<span>Start a quick lobby</span>
+								<FiArrowRight className="h-4 w-4" />
+							</Link>
 						</Button>
 						<Button
-							as={NextLink}
-							href="/lobby"
+							asChild
 							variant="ghost"
-							color={secondaryButtonColor}
-							_hover={{ color: secondaryButtonHover, bg: "transparent" }}
+							className="text-slate-800 hover:text-slate-900 dark:text-slate-100 dark:hover:text-white"
 						>
-							View open lobbies
+							<Link href="/lobby">View open lobbies</Link>
 						</Button>
-					</HStack>
-				</Stack>
-				<SimpleGrid
-					columns={{ base: 1, md: 3 }}
-					gap={{ base: 4, md: 6 }}
-					w="full"
-					pt={{ base: 2, md: 4 }}
-					position="relative"
-				>
+					</div>
+				</div>
+				<div className="relative mt-4 grid w-full grid-cols-1 gap-4 md:mt-6 md:grid-cols-3 md:gap-6">
 					{features.map((feature) => (
-						<Stack
+						<div
 							key={feature.title}
-							gap={2.5}
-							bg={featureBg}
-							borderWidth="1px"
-							borderColor={featureBorder}
-							borderRadius="2xl"
-							p={{ base: 4, md: 5 }}
-							shadow="lg"
+							className="group relative flex flex-col gap-2.5 rounded-3xl border border-white/70 bg-white/85 p-5 shadow-lg transition hover:-translate-y-1 hover:shadow-2xl dark:border-white/15 dark:bg-slate-900/70"
 						>
-							<Box
-								w={10}
-								h={10}
-								display="flex"
-								alignItems="center"
-								justifyContent="center"
-								borderRadius="xl"
-								bgGradient="linear(to-br, purple.500, pink.400)"
-								color="white"
-							>
-								<Icon as={feature.icon} boxSize={5} />
-							</Box>
-							<Text fontWeight="semibold" color={featureColor}>
+							<div className="flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-pink-400 text-white">
+								<feature.icon className="h-5 w-5" />
+							</div>
+							<h3 className="text-base font-semibold text-slate-800 dark:text-slate-100">
 								{feature.title}
-							</Text>
-							<Text fontSize="sm" color={subtext}>
+							</h3>
+							<p className="text-sm text-slate-600 dark:text-slate-300">
 								{feature.description}
-							</Text>
-						</Stack>
+							</p>
+						</div>
 					))}
-				</SimpleGrid>
-			</Box>
-		</Container>
+				</div>
+			</div>
+		</section>
 	);
 }
