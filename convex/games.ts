@@ -45,17 +45,36 @@ export const submitScore = mutation({
 				submittedAt: now,
 				userId: userId ?? undefined,
 			});
-			return { updated: true };
+		} else {
+			await ctx.db.insert("gameScores", {
+				gameId: game._id,
+				userId: userId ?? undefined,
+				clientId: args.clientId,
+				playerName: args.playerName,
+				score: args.score,
+				submittedAt: now,
+			});
 		}
-		await ctx.db.insert("gameScores", {
-			gameId: game._id,
-			userId: userId ?? undefined,
-			clientId: args.clientId,
-			playerName: args.playerName,
-			score: args.score,
-			submittedAt: now,
-		});
-		return { updated: false };
+		// Check if all active players have submitted
+		const presences = await ctx.db
+			.query("gamePresences")
+			.withIndex("by_game", (q) => q.eq("gameId", game._id))
+			.collect();
+		const activeClientIds = presences.map((p) => p.clientId);
+		const scores = await ctx.db
+			.query("gameScores")
+			.withIndex("by_game", (q) => q.eq("gameId", game._id))
+			.collect();
+		const allSubmitted = activeClientIds.every((cid) => scores.some((s) => s.clientId === cid));
+		// For solo mode, mark as completed after first submit
+		if ((game.mode === "solo" || activeClientIds.length === 1) && scores.length >= 1) {
+			if (game.status !== "completed") {
+				await ctx.db.patch(game._id, { status: "completed" });
+			}
+		} else if (allSubmitted && game.status !== "completed") {
+			await ctx.db.patch(game._id, { status: "completed" });
+		}
+		return { updated: true };
 	},
 });
 import { getAuthUserId } from "@convex-dev/auth/server";
