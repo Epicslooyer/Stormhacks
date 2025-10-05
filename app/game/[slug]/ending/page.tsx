@@ -76,12 +76,6 @@ export default function GameEndingPage({
 
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
-            href={`/game/${slug}`}
-            className="inline-flex items-center rounded-md border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted"
-          >
-            Back to Game
-          </Link>
-          <Link
             href={`/spectate`}
             className="inline-flex items-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
           >

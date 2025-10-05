@@ -342,6 +342,58 @@ export const getGameWinner = query({
 	},
 });
 
+// Mark game as completed if all players are finished (submitted and passed) or eliminated
+export const finalizeGameIfDone = mutation({
+    args: {
+        slug: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const game = await getGameBySlug(ctx.db, args.slug);
+        if (!game) throw new Error("Game not found");
+
+        // Get players participating in the game
+        const participants = await ctx.db
+            .query("participants")
+            .withIndex("by_game", q => q.eq("gameId", game._id).eq("role", "player"))
+            .collect();
+
+        if (participants.length === 0) return { completed: false };
+
+        // Fetch all scores
+        const scores = await ctx.db
+            .query("gameScores")
+            .withIndex("by_game", q => q.eq("gameId", game._id))
+            .collect();
+
+        // Map by clientId for quick lookup
+        const clientIdToScore = new Map(scores.map(s => [s.clientId, s]));
+		const userIdToScore = new Map(scores
+			.filter(s => s.userId)
+			.map(s => [s.userId!, s])
+		);
+
+        // A player is considered finished if:
+        // - they are eliminated OR
+        // - they have completionTime and testCasesPassed == totalTestCases
+        const allFinished = participants.every(p => {
+			const score = userIdToScore.get(p.identityId);
+			if (!score) return false;
+			const eliminated = score.isEliminated === true;
+			const fullyPassed = (score.testCasesPassed ?? -1) > -1
+			  && (score.totalTestCases ?? -1) > -1
+			  && score.testCasesPassed === score.totalTestCases
+			  && typeof score.completionTime === "number";
+			return eliminated || fullyPassed;
+		  });
+
+        if (!allFinished) return { completed: false };
+
+        // Mark game as completed
+        await ctx.db.patch(game._id, { status: "completed" });
+        return { completed: true };
+    }
+});
+
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
