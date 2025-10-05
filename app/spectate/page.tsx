@@ -200,7 +200,7 @@ export default async function SpectateHomePage() {
 													)}
 													<div className="flex items-center justify-between">
 														<dt className="font-medium text-slate-700 dark:text-white">
-															Kickoff
+								Start
 														</dt>
 														<dd>
 															{new Date(game.createdAt).toLocaleTimeString()}
