@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useGameConnection } from "@/components/useGameConnection";
+import { useTestCases } from "@/components/useTestCases";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +31,15 @@ export default function LobbySession({ slug }: { slug: string }) {
 	const [pending, setPending] = useState(false);
 	const [copied, setCopied] = useState(false);
 	const [readyPending, setReadyPending] = useState(false);
+	
+	// Test cases integration
+	const problemSlug = game?.problemSlug ?? null;
+	const { 
+		testCases, 
+		isLoading: testCasesLoading, 
+		generateTestCases, 
+		isGenerating: testCasesGenerating 
+	} = useTestCases(problemSlug);
 
 	const status = game?.status ?? "lobby";
 	const countdownSeconds =
@@ -299,6 +309,81 @@ export default function LobbySession({ slug }: { slug: string }) {
 						</CardContent>
 					</Card>
 				</div>
+
+				{/* Test Cases Section */}
+				{problemSlug && (
+					<Card>
+						<CardHeader>
+							<CardTitle className="flex items-center justify-between">
+								<span>Test Cases</span>
+								{!testCases && !testCasesLoading && (
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => generateTestCases()}
+										disabled={testCasesGenerating}
+									>
+										{testCasesGenerating ? "Generating..." : "Generate Test Cases"}
+									</Button>
+								)}
+							</CardTitle>
+						</CardHeader>
+						<CardContent>
+							{testCasesLoading ? (
+								<div className="text-center py-4 text-muted-foreground">
+									Loading test cases...
+								</div>
+							) : testCasesGenerating ? (
+								<div className="text-center py-4 text-muted-foreground">
+									Generating test cases...
+								</div>
+							) : testCases && testCases.testCases.length > 0 ? (
+								<div className="space-y-3">
+									<div className="text-sm text-muted-foreground">
+										{testCases.testCases.length} test case{testCases.testCases.length !== 1 ? 's' : ''} available
+									</div>
+									<div className="grid gap-2">
+										{testCases.testCases.slice(0, 3).map((testCase, index) => (
+											<div key={index} className="p-3 rounded-lg bg-muted/50 border text-sm">
+												<div className="font-medium mb-1">
+													Test Case {index + 1}
+													{testCase.description && (
+														<span className="text-muted-foreground ml-2">
+															- {testCase.description}
+														</span>
+													)}
+												</div>
+												<div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+													<div>
+														<span className="font-medium">Input:</span>
+														<div className="font-mono bg-background p-1 rounded mt-1">
+															{testCase.input}
+														</div>
+													</div>
+													<div>
+														<span className="font-medium">Expected:</span>
+														<div className="font-mono bg-background p-1 rounded mt-1">
+															{testCase.expectedOutput}
+														</div>
+													</div>
+												</div>
+											</div>
+										))}
+										{testCases.testCases.length > 3 && (
+											<div className="text-center text-sm text-muted-foreground">
+												... and {testCases.testCases.length - 3} more test cases
+											</div>
+										)}
+									</div>
+								</div>
+							) : (
+								<div className="text-center py-4 text-muted-foreground">
+									No test cases available. Click "Generate Test Cases" to create them.
+								</div>
+							)}
+						</CardContent>
+					</Card>
+				)}
 
 				{/* Footer */}
 				<div className="text-center text-sm text-muted-foreground pb-8">
