@@ -41,7 +41,9 @@ export const featuredProblems: ProblemOption[] = [
 	},
 ];
 
-export function normalizeProblem(problem: Record<string, unknown>): ProblemOption {
+export function normalizeProblem(
+	problem: Record<string, unknown>,
+): ProblemOption {
 	const slug = String(problem.slug ?? "");
 	const title = String(problem.title ?? problem.slug ?? "Untitled problem");
 	const id = String(problem.frontend_id ?? problem.id ?? slug);
@@ -60,13 +62,13 @@ export function normalizeProblem(problem: Record<string, unknown>): ProblemOptio
 export function difficultyBadgeClassName(difficulty: string) {
 	switch (difficulty) {
 		case "Easy":
-			return "border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/20 dark:text-emerald-100";
+			return "border-emerald-500/25 bg-emerald-400/15 text-emerald-600 dark:border-emerald-400/30 dark:bg-emerald-400/20 dark:text-emerald-100";
 		case "Medium":
-			return "border-amber-200 bg-amber-100 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-100";
+			return "border-amber-500/30 bg-amber-400/15 text-amber-600 dark:border-amber-400/30 dark:bg-amber-400/20 dark:text-amber-100";
 		case "Hard":
-			return "border-rose-200 bg-rose-100 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/20 dark:text-rose-100";
+			return "border-rose-500/35 bg-rose-500/15 text-rose-600 dark:border-rose-400/30 dark:bg-rose-400/20 dark:text-rose-100";
 		default:
-			return "border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-600/50 dark:bg-slate-700/40 dark:text-slate-100";
+			return "border-slate-500/25 bg-slate-400/15 text-slate-600 dark:border-slate-500/30 dark:bg-slate-500/20 dark:text-slate-100";
 	}
 }
 
