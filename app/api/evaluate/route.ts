@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { openrouter } from "@/lib/openrouter";
 import { generateObject } from "ai";
 import { z } from "zod";
+import { detectONotation, calculateScore } from "@/lib/scoring";
 
 export const runtime = "nodejs";
 
@@ -39,6 +40,15 @@ interface EvaluationResult {
     totalTests: number;
     passedTests: number;
     totalTime: number;
+  };
+  scoring: {
+    oNotation: string | null;
+    calculatedScore: number;
+    scoreBreakdown: {
+      timeScore: number;
+      efficiencyScore: number;
+      correctnessScore: number;
+    };
   };
   feedback?: string;
   cleanedCode?: string;
@@ -127,6 +137,15 @@ Be fair but not overly strict. If the code shows understanding of the problem an
       });
     }
 
+    // Calculate O notation and score
+    const oNotation = detectONotation(code);
+    const scoreCalculation = calculateScore({
+      completionTime: totalTime, // Use total execution time as completion time
+      oNotation,
+      testCasesPassed: passedTests,
+      totalTestCases: testCases.length,
+    });
+
     const evaluationResult: EvaluationResult = {
       success: true,
       results,
@@ -134,6 +153,11 @@ Be fair but not overly strict. If the code shows understanding of the problem an
         totalTests: testCases.length,
         passedTests,
         totalTime,
+      },
+      scoring: {
+        oNotation,
+        calculatedScore: scoreCalculation.finalScore,
+        scoreBreakdown: scoreCalculation.breakdown,
       },
       feedback: undefined, // No feedback requested
       cleanedCode: undefined, // Don't show cleaned code since we're not modifying user code
