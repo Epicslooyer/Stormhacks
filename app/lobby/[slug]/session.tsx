@@ -31,15 +31,19 @@ export default function LobbySession({ slug }: { slug: string }) {
 	const [pending, setPending] = useState(false);
 	const [copied, setCopied] = useState(false);
 	const [readyPending, setReadyPending] = useState(false);
-	
+
 	// Test cases integration
 	const problemSlug = game?.problemSlug ?? null;
-	const { 
-		testCases, 
-		isLoading: testCasesLoading, 
-		generateTestCases, 
-		isGenerating: testCasesGenerating 
-	} = useTestCases(problemSlug, game?.problemTitle ?? undefined, game?.problemDifficulty ?? undefined);
+	const {
+		testCases,
+		isLoading: testCasesLoading,
+		generateTestCases,
+		isGenerating: testCasesGenerating,
+	} = useTestCases(
+		problemSlug,
+		game?.problemTitle ?? undefined,
+		game?.problemDifficulty ?? undefined,
+	);
 
 	const status = game?.status ?? "lobby";
 	const countdownSeconds =
@@ -56,7 +60,7 @@ export default function LobbySession({ slug }: { slug: string }) {
 	const countdownActive = status === "countdown" && countdownSeconds !== null;
 	const problemTitle = game?.problemTitle ?? game?.name ?? resolvedSlug;
 	const problemDifficulty = game?.problemDifficulty ?? null;
-	
+
 	const visibleParticipants = useMemo(() => {
 		return participants.map((presence) => {
 			const isGuest = presence.userId === null;
@@ -73,7 +77,9 @@ export default function LobbySession({ slug }: { slug: string }) {
 		});
 	}, [participants]);
 
-	const currentPlayer = visibleParticipants.find((p) => p.clientId === clientId);
+	const currentPlayer = visibleParticipants.find(
+		(p) => p.clientId === clientId,
+	);
 	const isCurrentPlayerReady = currentPlayer?.isReady ?? false;
 	const emptySlots = Math.max(MAX_PLAYERS - visibleParticipants.length, 0);
 
@@ -93,10 +99,22 @@ export default function LobbySession({ slug }: { slug: string }) {
 							{game?.name ?? `Lobby ${resolvedSlug}`}
 						</h1>
 						<div className="flex items-center justify-center gap-2">
-							<Badge variant={status === "lobby" ? "secondary" : status === "countdown" ? "default" : "outline"}>
-								{status === "lobby" ? "Waiting for players" : 
-								 status === "countdown" ? "Starting soon" : 
-								 status === "active" ? "Game in progress" : "Completed"}
+							<Badge
+								variant={
+									status === "lobby"
+										? "secondary"
+										: status === "countdown"
+											? "default"
+											: "outline"
+								}
+							>
+								{status === "lobby"
+									? "Waiting for players"
+									: status === "countdown"
+										? "Starting soon"
+										: status === "active"
+											? "Game in progress"
+											: "Completed"}
 							</Badge>
 							{problemDifficulty && (
 								<Badge variant="outline" className="capitalize">
@@ -124,89 +142,106 @@ export default function LobbySession({ slug }: { slug: string }) {
 					</Card>
 				)}
 
-			{/* Main Content */}
-			<div className="grid md:grid-cols-2 gap-6">
-				{/* Players Section */}
-				<Card className="h-fit">
-					<CardHeader>
-						<CardTitle className="flex items-center gap-2">
-							<div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-							Players ({Math.min(presenceCount, MAX_PLAYERS)}/{MAX_PLAYERS}) - Ready ({Math.min(readyCount, MAX_PLAYERS)}/{MAX_PLAYERS})
-						</CardTitle>
-					</CardHeader>
-					<CardContent className="space-y-3">
-						{visibleParticipants.length === 0 ? (
-							<div className="text-center py-8 text-muted-foreground">
-								<div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-									<svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-									</svg>
+				{/* Main Content */}
+				<div className="grid md:grid-cols-2 gap-6">
+					{/* Players Section */}
+					<Card className="h-fit">
+						<CardHeader>
+							<CardTitle className="flex items-center gap-2">
+								<div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+								Players ({Math.min(presenceCount, MAX_PLAYERS)}/{MAX_PLAYERS}) -
+								Ready ({Math.min(readyCount, MAX_PLAYERS)}/{MAX_PLAYERS})
+							</CardTitle>
+						</CardHeader>
+						<CardContent className="space-y-3">
+							{visibleParticipants.length === 0 ? (
+								<div className="text-center py-8 text-muted-foreground">
+									<div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+										<svg
+											className="w-8 h-8"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
+											/>
+										</svg>
+									</div>
+									<p>Waiting for players to join...</p>
 								</div>
-								<p>Waiting for players to join...</p>
-							</div>
-						) : (
-							<div className="space-y-3">
-								{visibleParticipants.map((player, index) => (
-									<div
-										key={player.key}
-										className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border"
-									>
-										<div className="flex items-center gap-3">
-											<div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
-												{index + 1}
+							) : (
+								<div className="space-y-3">
+									{visibleParticipants.map((player, index) => (
+										<div
+											key={player.key}
+											className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border"
+										>
+											<div className="flex items-center gap-3">
+												<div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
+													{index + 1}
+												</div>
+												<div>
+													<p className="font-medium">{player.label}</p>
+													{player.isGuest && (
+														<Badge variant="outline" className="text-xs">
+															Guest
+														</Badge>
+													)}
+												</div>
 											</div>
-											<div>
-												<p className="font-medium">{player.label}</p>
-												{player.isGuest && (
-													<Badge variant="outline" className="text-xs">
-														Guest
-													</Badge>
+											<div className="flex items-center gap-2">
+												{player.isReady ? (
+													<>
+														<div className="w-2 h-2 bg-green-500 rounded-full"></div>
+														<span className="text-sm text-green-600 dark:text-green-400">
+															Ready
+														</span>
+													</>
+												) : (
+													<>
+														<div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+														<span className="text-sm text-orange-600 dark:text-orange-400">
+															Not Ready
+														</span>
+													</>
 												)}
 											</div>
 										</div>
-										<div className="flex items-center gap-2">
-											{player.isReady ? (
-												<>
-													<div className="w-2 h-2 bg-green-500 rounded-full"></div>
-													<span className="text-sm text-green-600 dark:text-green-400">Ready</span>
-												</>
-											) : (
-												<>
-													<div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-													<span className="text-sm text-orange-600 dark:text-orange-400">Not Ready</span>
-												</>
-											)}
-										</div>
-									</div>
-								))}
+									))}
 
-								{emptySlots > 0 && (
-									<div className="flex items-center justify-between p-3 rounded-lg border-2 border-dashed border-muted-foreground/30">
-										<div className="flex items-center gap-3">
-											<div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground">
-												+{emptySlots}
+									{emptySlots > 0 && (
+										<div className="flex items-center justify-between p-3 rounded-lg border-2 border-dashed border-muted-foreground/30">
+											<div className="flex items-center gap-3">
+												<div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium text-muted-foreground">
+													+{emptySlots}
+												</div>
+												<div>
+													<p className="font-medium text-muted-foreground">
+														{emptySlots === 1
+															? "1 more player can join"
+															: `${emptySlots} more players can join`}
+													</p>
+												</div>
 											</div>
-											<div>
-												<p className="font-medium text-muted-foreground">
-													{emptySlots === 1
-														? "1 more player can join"
-														: `${emptySlots} more players can join`}
-												</p>
+											<div className="flex items-center gap-2">
+												<div className="w-2 h-2 bg-muted-foreground/30 rounded-full"></div>
+												<span className="text-sm text-muted-foreground">
+													Awaiting players
+												</span>
 											</div>
 										</div>
-										<div className="flex items-center gap-2">
-											<div className="w-2 h-2 bg-muted-foreground/30 rounded-full"></div>
-											<span className="text-sm text-muted-foreground">Awaiting players</span>
-										</div>
-									</div>
-								)}
-							</div>
-						)}
-					</CardContent>
-				</Card>
+									)}
+								</div>
+							)}
+						</CardContent>
+					</Card>
 
-			{/* Game Info & Actions */}
-			<Card className="h-fit">
+					{/* Game Info & Actions */}
+					<Card className="h-fit">
 						<CardHeader>
 							<CardTitle>Game Settings</CardTitle>
 						</CardHeader>
@@ -241,7 +276,9 @@ export default function LobbySession({ slug }: { slug: string }) {
 								<h3 className="font-medium">Your Connection</h3>
 								<div className="flex items-center gap-2 text-sm text-muted-foreground">
 									<div className="w-2 h-2 bg-green-500 rounded-full"></div>
-					{clientId ? `Connected as ${clientId.slice(0, 8)}` : "Connecting..."}
+									{clientId
+										? `Connected as ${clientId.slice(0, 8)}`
+										: "Connecting..."}
 								</div>
 							</div>
 
@@ -261,49 +298,55 @@ export default function LobbySession({ slug }: { slug: string }) {
 										}
 									}}
 								>
-									{readyPending ? "Updating..." : 
-									 isCurrentPlayerReady ? "Unready" : "Ready Up"}
+									{readyPending
+										? "Updating..."
+										: isCurrentPlayerReady
+											? "Unready"
+											: "Ready Up"}
 								</Button>
 
-				{/* Start Game Button */}
-				{isOwner ? (
-					<Button
-						className="w-full"
-						size="lg"
-						disabled={!canStart || pending}
-						onClick={async () => {
-							if (!canStart || pending) return;
-							setPending(true);
-							try {
-								await beginCountdown({ slug: resolvedSlug, durationMs: 5000 });
-							} finally {
-								setPending(false);
-							}
-						}}
-					>
-						{pending
-							? "Starting..."
-							: presenceCount < MIN_PLAYERS_TO_START
-								? "Waiting for players..."
-								: readyCount < MIN_PLAYERS_TO_START
-									? "Waiting for ready..."
-									: "Start Game"}
-					</Button>
-				) : (
-					<div className="text-center space-y-2">
-						<Button variant="outline" className="w-full" disabled>
-							Waiting for host to start...
-						</Button>
-						<p className="text-sm text-muted-foreground">
-							Only the lobby creator can start the game
-						</p>
-					</div>
-				)}
+								{/* Start Game Button */}
+								{isOwner ? (
+									<Button
+										className="w-full"
+										size="lg"
+										disabled={!canStart || pending}
+										onClick={async () => {
+											if (!canStart || pending) return;
+											setPending(true);
+											try {
+												await beginCountdown({
+													slug: resolvedSlug,
+													durationMs: 5000,
+												});
+											} finally {
+												setPending(false);
+											}
+										}}
+									>
+										{pending
+											? "Starting..."
+											: presenceCount < MIN_PLAYERS_TO_START
+												? "Waiting for players..."
+												: readyCount < MIN_PLAYERS_TO_START
+													? "Waiting for ready..."
+													: "Start Game"}
+									</Button>
+								) : (
+									<div className="text-center space-y-2">
+										<Button variant="outline" className="w-full" disabled>
+											Waiting for host to start...
+										</Button>
+										<p className="text-sm text-muted-foreground">
+											Only the lobby creator can start the game
+										</p>
+									</div>
+								)}
 
 								<Link href={`/game/${resolvedSlug}`}>
-															<Button variant="ghost" className="w-full">
-																Play solo mode
-															</Button>
+									<Button variant="ghost" className="w-full">
+										Play solo mode
+									</Button>
 								</Link>
 							</div>
 						</CardContent>
@@ -323,7 +366,9 @@ export default function LobbySession({ slug }: { slug: string }) {
 										onClick={() => generateTestCases()}
 										disabled={testCasesGenerating}
 									>
-										{testCasesGenerating ? "Generating..." : "Generate Test Cases"}
+										{testCasesGenerating
+											? "Generating..."
+											: "Generate Test Cases"}
 									</Button>
 								)}
 							</CardTitle>
@@ -340,11 +385,15 @@ export default function LobbySession({ slug }: { slug: string }) {
 							) : testCases && testCases.testCases.length > 0 ? (
 								<div className="space-y-3">
 									<div className="text-sm text-muted-foreground">
-										{testCases.testCases.length} test case{testCases.testCases.length !== 1 ? 's' : ''} available
+										{testCases.testCases.length} test case
+										{testCases.testCases.length !== 1 ? "s" : ""} available
 									</div>
 									<div className="grid gap-2">
 										{testCases.testCases.slice(0, 3).map((testCase, index) => (
-											<div key={index} className="p-3 rounded-lg bg-muted/50 border text-sm">
+											<div
+												key={index}
+												className="p-3 rounded-lg bg-muted/50 border text-sm"
+											>
 												<div className="font-medium mb-1">
 													Test Case {index + 1}
 													{testCase.description && (
@@ -378,7 +427,8 @@ export default function LobbySession({ slug }: { slug: string }) {
 								</div>
 							) : (
 								<div className="text-center py-4 text-muted-foreground">
-									No test cases available. Click "Generate Test Cases" to create them.
+									No test cases available. Click "Generate Test Cases" to create
+									them.
 								</div>
 							)}
 						</CardContent>
@@ -387,7 +437,9 @@ export default function LobbySession({ slug }: { slug: string }) {
 
 				{/* Footer */}
 				<div className="text-center text-sm text-muted-foreground pb-8">
-					<p>Share the lobby link with your friend to start playing together!</p>
+					<p>
+						Share the lobby link with your friend to start playing together!
+					</p>
 				</div>
 			</div>
 		</main>

@@ -1,0 +1,158 @@
+@font-face {
+	font-family: "ClashRegular";
+	src: url("/Clash_Regular.otf") format("opentype");
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+.root {
+	position: relative;
+	display: flex;
+	justify-content: center;
+	padding: 0;
+	border: none;
+	background: transparent;
+	cursor: pointer;
+	font: inherit;
+	text-decoration: none;
+	outline: none;
+	width: fit-content;
+}
+
+.surface {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 1.2rem 3.5rem;
+	min-width: 12.5rem;
+	border-radius: 1.6rem;
+	border: 4px solid #f6b300;
+
+	background: linear-gradient(180deg, #fff082 0%, #ffc632 48%, #f28106 100%);
+	box-shadow:
+		inset 0 2px 0 rgba(255, 255, 255, 0.65),
+		0 8px 0 #c87000,
+		0 18px 26px rgba(0, 0, 0, 0.4);
+
+	transition:
+		transform 120ms ease,
+		box-shadow 120ms ease;
+	isolation: isolate;
+}
+
+.surface::before {
+	content: "";
+	position: absolute;
+	inset: 8px 10px 16px 10px;
+	border-radius: 1.15rem;
+
+	background: linear-gradient(
+		180deg,
+		rgba(255, 255, 255, 0.96) 0%,
+		rgba(255, 255, 255, 0.64) 45%,
+		rgba(255, 255, 255, 0.08) 78%
+	);
+	opacity: 0.96;
+	pointer-events: none;
+	z-index: 0;
+	mix-blend-mode: screen;
+}
+
+.surface::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	box-shadow:
+		inset 0 -10px 0 rgba(199, 84, 0, 0.55),
+		inset 0 -22px 18px rgba(154, 59, 0, 0.45);
+
+	pointer-events: none;
+	z-index: 0;
+}
+
+.surface::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	box-shadow: inset 0 -6px 0 rgba(182, 84, 0, 0.4);
+	pointer-events: none;
+	z-index: 0;
+}
+
+.label {
+	position: relative;
+	z-index: 1;
+	font-family: "ClashRegular", var(--font-geist-sans), sans-serif;
+	font-weight: 900;
+	font-size: clamp(1.85rem, 2.2vw + 1rem, 2.55rem);
+
+	line-height: 1;
+	letter-spacing: 0.035em;
+	color: #fffdfd;
+	background: linear-gradient(180deg, #ffffff 0%, #fff4cf 55%, #ffec9a 100%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+	text-shadow:
+		-4px -2px 0 #2f1606,
+		4px -2px 0 #2f1606,
+		-4px 3px 0 #2f1606,
+		4px 3px 0 #2f1606,
+		0 6px 0 #2f1606,
+		0 10px 10px rgba(0, 0, 0, 0.45);
+}
+
+.bubble {
+	position: absolute;
+	top: 0.85rem;
+	right: 1.2rem;
+	width: 1.55rem;
+	height: 1.55rem;
+	border-radius: 9999px;
+	background: radial-gradient(
+		circle at 35% 35%,
+		rgba(255, 255, 255, 0.98),
+		rgba(255, 255, 255, 0.6) 55%,
+		rgba(255, 255, 255, 0) 100%
+	);
+	box-shadow:
+		-8px -6px 0 rgba(255, 255, 255, 0.35),
+		inset 0 -2px 4px rgba(255, 255, 255, 0.25);
+	z-index: 1;
+	pointer-events: none;
+}
+
+.root:focus-visible .surface {
+	box-shadow:
+		inset 0 2px 0 rgba(255, 255, 255, 0.4),
+		0 8px 0 #c87000,
+		0 0 0 4px rgba(255, 255, 255, 0.85),
+		0 0 0 8px rgba(255, 196, 0, 0.45),
+		0 20px 30px rgba(0, 0, 0, 0.45);
+}
+
+.root:active .surface {
+	transform: translateY(5px);
+	box-shadow:
+		inset 0 2px 0 rgba(255, 255, 255, 0.3),
+		0 4px 0 #a55600,
+		0 12px 18px rgba(0, 0, 0, 0.4);
+}
+
+.root:disabled,
+.root[aria-disabled="true"] {
+	cursor: not-allowed;
+}
+
+.root:disabled .surface,
+.root[aria-disabled="true"] .surface {
+	filter: grayscale(20%);
+	opacity: 0.7;
+	box-shadow:
+		0 6px 0 #b3b3b3,
+		0 10px 18px rgba(0, 0, 0, 0.25);
+}
