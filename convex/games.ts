@@ -66,6 +66,7 @@ import { mutation, query } from "./_generated/server";
 
 const PRESENCE_TTL = 1000 * 15;
 const CURSOR_TTL = 1000 * 10;
+const CODE_TTL = 1000 * 20;
 
 const gameStatusValidator = v.union(
 	v.literal("lobby"),
@@ -170,11 +171,10 @@ export const beginCountdown = mutation({
 			.collect();
 		const activePresences = presences.filter((presence) => presence.updatedAt >= cutoff);
 		
-		if (activePresences.length < 1) {
-			throw new Error("Need at least 1 player to start the game");
-		}
-		
 		const readyCount = activePresences.filter((presence) => presence.isReady === true).length;
+		if (readyCount < 1) {
+			throw new Error("Need at least 1 ready player to start the game");
+		}
 		if (readyCount < activePresences.length) {
 			throw new Error("All players must be ready to start the game");
 		}
@@ -334,6 +334,45 @@ export const updateCursorPosition = mutation({
 	},
 });
 
+export const updateCodeState = mutation({
+	args: {
+		slug: v.string(),
+		clientId: v.string(),
+		code: v.string(),
+		language: v.optional(v.string()),
+	},
+	handler: async (ctx, args) => {
+		const game = await getGameBySlug(ctx.db, args.slug);
+		if (!game) {
+			throw new Error("Game not found");
+		}
+		const userId = await getAuthUserId(ctx);
+		const now = Date.now();
+		const existing = await ctx.db
+			.query("codeSnapshots")
+			.withIndex("by_game_client", (q) =>
+				q.eq("gameId", game._id).eq("clientId", args.clientId),
+			)
+			.unique();
+		const payload = {
+			code: args.code,
+			language: args.language ?? undefined,
+			updatedAt: now,
+			userId: userId ?? undefined,
+		};
+		if (existing) {
+			await ctx.db.patch(existing._id, payload);
+			return { updated: true };
+		}
+		await ctx.db.insert("codeSnapshots", {
+			gameId: game._id,
+			clientId: args.clientId,
+			...payload,
+		});
+		return { updated: false };
+	},
+});
+
 export const leaveGame = mutation({
 	args: {
 		slug: v.string(),
@@ -362,6 +401,15 @@ export const leaveGame = mutation({
 			.unique();
 		if (cursor) {
 			await ctx.db.delete(cursor._id);
+		}
+		const codeSnapshot = await ctx.db
+			.query("codeSnapshots")
+			.withIndex("by_game_client", (q) =>
+				q.eq("gameId", game._id).eq("clientId", args.clientId),
+			)
+			.unique();
+		if (codeSnapshot) {
+			await ctx.db.delete(codeSnapshot._id);
 		}
 		return { removed: true };
 	},
@@ -418,6 +466,32 @@ export const activeCursorPositions = query({
 				lineNumber: cursor.lineNumber,
 				column: cursor.column,
 				lastUpdated: cursor.updatedAt,
+			}));
+	},
+});
+
+export const activeCodeSnapshots = query({
+	args: {
+		slug: v.string(),
+	},
+	handler: async (ctx, args) => {
+		const game = await getGameBySlug(ctx.db, args.slug);
+		if (!game) {
+			return [];
+		}
+		const cutoff = Date.now() - CODE_TTL;
+		const snapshots = await ctx.db
+			.query("codeSnapshots")
+			.withIndex("by_game", (q) => q.eq("gameId", game._id))
+			.collect();
+		return snapshots
+			.filter((snapshot) => snapshot.updatedAt >= cutoff)
+			.map((snapshot) => ({
+				clientId: snapshot.clientId,
+				userId: snapshot.userId ?? null,
+				code: snapshot.code,
+				language: snapshot.language ?? null,
+				lastUpdated: snapshot.updatedAt,
 			}));
 	},
 });

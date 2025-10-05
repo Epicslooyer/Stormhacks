@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
+import { ColorModeButton } from "@/components/ui/color-mode";
 import { Provider } from "@/components/ui/provider";
 
 const geistSans = Geist({
@@ -35,7 +36,14 @@ export default function RootLayout({
 					className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 				>
 					<Provider>
-						<ConvexClientProvider>{children}</ConvexClientProvider>
+						<ConvexClientProvider>
+							<div className="min-h-screen">
+								<div className="pointer-events-none fixed bottom-4 right-4 z-40">
+									<ColorModeButton className="pointer-events-auto" />
+								</div>
+								{children}
+							</div>
+						</ConvexClientProvider>
 					</Provider>
 				</body>
 			</html>
