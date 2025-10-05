@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface GameTimerState {
   elapsedTime: number; // milliseconds
@@ -37,57 +37,86 @@ export function useGameTimer(): GameTimerState & GameTimerActions {
     };
   }, []);
 
-  const start = () => {
-    if (state.isRunning) return;
-
-    const now = Date.now();
-    setState(prev => ({
-      ...prev,
-      isRunning: true,
-      startTime: prev.startTime || now,
-      pauseTime: null,
-    }));
-
-    // Start the timer interval
-    intervalRef.current = setInterval(() => {
-      setState(prev => {
-        if (!prev.isRunning || !prev.startTime) return prev;
-        
-        const now = Date.now();
-        const elapsed = now - prev.startTime - prev.totalPausedTime;
-        
-        return {
-          ...prev,
-          elapsedTime: elapsed,
-        };
-      });
-    }, 100); // Update every 100ms for smooth display
-  };
-
-  const pause = () => {
-    if (!state.isRunning) return;
-
-    const now = Date.now();
-    setState(prev => ({
-      ...prev,
-      isRunning: false,
-      pauseTime: now,
-    }));
-
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  };
-
-  const resume = () => {
-    if (state.isRunning) return;
-
-    const now = Date.now();
+  const start = useCallback(() => {
     setState(prev => {
-      if (!prev.pauseTime) return prev;
+      if (prev.isRunning) {
+        console.log("Timer already running, skipping start");
+        return prev;
+      }
 
+      const now = Date.now();
+      console.log("Starting timer at:", now);
+      
+      // Start the timer interval
+      intervalRef.current = setInterval(() => {
+        setState(intervalPrev => {
+          if (!intervalPrev.isRunning || !intervalPrev.startTime) {
+            console.log("Timer interval: not running or no start time", { isRunning: intervalPrev.isRunning, startTime: intervalPrev.startTime });
+            return intervalPrev;
+          }
+          
+          const now = Date.now();
+          const elapsed = now - intervalPrev.startTime - intervalPrev.totalPausedTime;
+          
+          console.log("Timer interval update:", { now, startTime: intervalPrev.startTime, totalPausedTime: intervalPrev.totalPausedTime, elapsed });
+          
+          return {
+            ...intervalPrev,
+            elapsedTime: Math.max(0, elapsed),
+          };
+        });
+      }, 100); // Update every 100ms for smooth display
+
+      return {
+        ...prev,
+        isRunning: true,
+        startTime: prev.startTime || now,
+        pauseTime: null,
+      };
+    });
+  }, []);
+
+  const pause = useCallback(() => {
+    setState(prev => {
+      if (!prev.isRunning) return prev;
+
+      const now = Date.now();
+      
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+
+      return {
+        ...prev,
+        isRunning: false,
+        pauseTime: now,
+      };
+    });
+  }, []);
+
+  const resume = useCallback(() => {
+    setState(prev => {
+      if (prev.isRunning || !prev.pauseTime) return prev;
+
+      const now = Date.now();
       const pauseDuration = now - prev.pauseTime;
+      
+      // Restart the timer interval
+      intervalRef.current = setInterval(() => {
+        setState(intervalPrev => {
+          if (!intervalPrev.isRunning || !intervalPrev.startTime) return intervalPrev;
+          
+          const now = Date.now();
+          const elapsed = now - intervalPrev.startTime - intervalPrev.totalPausedTime;
+          
+          return {
+            ...intervalPrev,
+            elapsedTime: Math.max(0, elapsed),
+          };
+        });
+      }, 100);
+
       return {
         ...prev,
         isRunning: true,
@@ -95,24 +124,9 @@ export function useGameTimer(): GameTimerState & GameTimerActions {
         pauseTime: null,
       };
     });
+  }, []);
 
-    // Restart the timer interval
-    intervalRef.current = setInterval(() => {
-      setState(prev => {
-        if (!prev.isRunning || !prev.startTime) return prev;
-        
-        const now = Date.now();
-        const elapsed = now - prev.startTime - prev.totalPausedTime;
-        
-        return {
-          ...prev,
-          elapsedTime: elapsed,
-        };
-      });
-    }, 100);
-  };
-
-  const stop = () => {
+  const stop = useCallback(() => {
     setState(prev => ({
       ...prev,
       isRunning: false,
@@ -123,9 +137,9 @@ export function useGameTimer(): GameTimerState & GameTimerActions {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-  };
+  }, []);
 
-  const reset = () => {
+  const reset = useCallback(() => {
     setState({
       elapsedTime: 0,
       isRunning: false,
@@ -138,9 +152,9 @@ export function useGameTimer(): GameTimerState & GameTimerActions {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-  };
+  }, []);
 
-  const getFormattedTime = (): string => {
+  const getFormattedTime = useCallback((): string => {
     const totalSeconds = Math.floor(state.elapsedTime / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
@@ -150,7 +164,7 @@ export function useGameTimer(): GameTimerState & GameTimerActions {
       return `${minutes}:${seconds.toString().padStart(2, '0')}.${milliseconds}`;
     }
     return `${seconds}.${milliseconds}`;
-  };
+  }, [state.elapsedTime]);
 
   return {
     ...state,
