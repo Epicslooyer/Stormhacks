@@ -114,6 +114,16 @@ export default function GameSession({ slug }: { slug: string }) {
 	const scores = useQuery(api.games.getScoresForGame, { slug: resolvedSlug });
 	const leaderboard = useQuery(api.games.getGameLeaderboard, { slug: resolvedSlug });
 	const gameWinner = useQuery(api.games.getGameWinner, { slug: resolvedSlug });
+// Try finalization when leaderboard updates (cheap check)
+	useEffect(() => {
+		if (!resolvedSlug) return;
+		// ask backend to mark game completed when appropriate
+		void (async () => {
+			try {
+				await fetch(`/api/convex/finalize?slug=${encodeURIComponent(resolvedSlug)}`, { cache: "no-store" });
+			} catch {}
+		})();
+	}, [resolvedSlug, leaderboard?.leaderboard?.length, leaderboard?.eliminatedCount, scores?.length]);
 	const editorRef = useRef<MonacoEditorNS.IStandaloneCodeEditor | null>(null);
 	const cursorListenerRef = useRef<IDisposable | null>(null);
 	const pendingCursorRef = useRef<{ lineNumber: number; column: number } | null>(
@@ -129,6 +139,22 @@ export default function GameSession({ slug }: { slug: string }) {
 		code: "",
 		language: null,
 	});
+
+	// Spectator states
+	const isEliminated = useMemo(() => {
+		if (!leaderboard) return false;
+		return leaderboard.eliminatedPlayers?.some((p: any) => p.clientId === clientId) ?? false;
+	}, [leaderboard, clientId]);
+
+	// If eliminated, lock editor and redirect to spectate
+	useEffect(() => {
+		if (isEliminated) {
+			// lock editor/submit immediately
+			setSubmitted(true);
+			// redirect to game-specific spectate view
+			router.replace(`/spectate?slug=${encodeURIComponent(resolvedSlug)}`);
+		}
+	}, [isEliminated, router, resolvedSlug]);
 
 	// Guard to ensure timer only starts once per session
 	const timerStartedRef = useRef(false);
@@ -453,15 +479,11 @@ export default function GameSession({ slug }: { slug: string }) {
 			?.NeverGrowsWhenTypingAtEdges;
 		const newDecorations = remoteCursorEntries.map((cursor, index) => {
 			const colorTheme = REMOTE_CURSOR_STYLES[index % REMOTE_CURSOR_STYLES.length];
-			const lineMaxColumn = model.getLineMaxColumn(cursor.lineNumber);
+			const safeLine = Math.max(1, Math.min(cursor.lineNumber, model.getLineCount()));
+			const lineMaxColumn = model.getLineMaxColumn(safeLine);
 			const startColumn = Math.max(1, Math.min(cursor.column, lineMaxColumn));
 			return {
-			range: new monacoGlobal.Range(
-				cursor.lineNumber,
-				startColumn,
-				cursor.lineNumber,
-				startColumn,
-			),
+			range: new monacoGlobal.Range(safeLine, startColumn, safeLine, startColumn),
 			options: {
 				inlineClassName: `remote-cursor-color-${colorTheme.suffix}`,
 				linesDecorationsClassName: `remote-cursor-line-${colorTheme.suffix}`,
@@ -804,7 +826,7 @@ export default function GameSession({ slug }: { slug: string }) {
 								Waiting for the host to begin the game…
 							</p>
 						)}
-						{gameStarted && !submitted && (
+		{gameStarted && !submitted && !isEliminated && (
 							<div className="flex items-center gap-4">
 								<div className="text-center">
 									<p className="text-sm text-muted-foreground">Time</p>
@@ -825,7 +847,7 @@ export default function GameSession({ slug }: { slug: string }) {
 								)}
 							</div>
 						)}
-						{!gameStarted && game?.status === "active" && (
+		{!gameStarted && game?.status === "active" && !isEliminated && (
 							<div className="text-center space-y-2">
 								<Button 
 									variant="outline" 
@@ -847,7 +869,7 @@ export default function GameSession({ slug }: { slug: string }) {
 								</div>
 							</div>
 						)}
-						{submitted && (
+		{submitted && !isEliminated && (
 							<div className="text-center">
 								<p className="text-sm text-muted-foreground">Final Time</p>
 								<p className="font-mono text-lg font-bold text-green-600">
@@ -892,12 +914,17 @@ export default function GameSession({ slug }: { slug: string }) {
 							</Link>
 						)}
 					</div>
-					<div className="flex-1 overflow-y-auto px-4 py-4 text-sm">
+			<div className="flex-1 overflow-y-auto px-4 py-4 text-sm">
 						{problemSlug === null && (
 							<p className="text-muted-foreground">
 								This lobby is not linked to a LeetCode problem yet.
 							</p>
 						)}
+				{isEliminated && (
+					<div className="mb-3 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600">
+						You’ve been eliminated. You can still spectate and stay on the leaderboard.
+					</div>
+				)}
 						{problemSlug !== null && problemPending && (
 							<p className="text-muted-foreground">Loading problem details…</p>
 						)}
@@ -982,10 +1009,10 @@ export default function GameSession({ slug }: { slug: string }) {
 							</Select>
 						</div>
 						<div className="flex items-center gap-3">
-							<Button variant="outline" size="sm" onClick={handleRun}>
+							<Button variant="outline" size="sm" onClick={handleRun} disabled={submitted || isEliminated || game?.status === "completed"}>
 								Run
 							</Button>
-							<Button size="sm" onClick={handleSubmit} disabled={submitted}>
+							<Button size="sm" onClick={handleSubmit} disabled={submitted || isEliminated || game?.status === "completed"}>
 								Submit
 							</Button>
 						</div>
@@ -1002,7 +1029,7 @@ export default function GameSession({ slug }: { slug: string }) {
 								fontSize: 14,
 								minimap: { enabled: false },
 								scrollBeyondLastLine: false,
-								readOnly: submitted,
+								readOnly: submitted || isEliminated || game?.status === "completed",
 							}}
 							theme="vs-dark"
 							loading={
