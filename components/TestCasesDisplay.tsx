@@ -64,7 +64,7 @@ export function TestCasesDisplay({ problemSlug }: TestCasesDisplayProps) {
         
         {generateError && (
           <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
-            <p className="text-red-600 text-sm">{generateError.message}</p>
+            <p className="text-red-600 text-sm">{String(generateError)}</p>
           </div>
         )}
         

@@ -15,6 +15,7 @@ import type {
 } from "convex/server";
 import type * as auth from "../auth.js";
 import type * as authHelpers from "../authHelpers.js";
+import type * as chats from "../chats.js";
 import type * as emailProvider from "../emailProvider.js";
 import type * as games from "../games.js";
 import type * as http from "../http.js";
@@ -33,6 +34,7 @@ import type * as round from "../round.js";
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   authHelpers: typeof authHelpers;
+  chats: typeof chats;
   emailProvider: typeof emailProvider;
   games: typeof games;
   http: typeof http;

@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import { useGameConnection } from "@/components/useGameConnection";
 import { useProblemDetails } from "@/components/useProblemDetails";
 import { useTestCases } from "@/components/useTestCases";
 import { CodeExecutor } from "@/components/CodeExecutor";
+import SpectatorChat from "@/components/SpectatorChat";
 import type { CodeSnippet } from "leetcode-query";
 import { api } from "@/convex/_generated/api";
 // @ts-ignore - monaco-editor types not available
@@ -67,7 +68,7 @@ export default function GameSession({ slug }: { slug: string }) {
 	} = useProblemDetails(problemSlug);
 	
 	// Test cases for code execution
-	const { testCases } = useTestCases(problemSlug);
+	const { testCases } = useTestCases(problemSlug, problem?.title ?? undefined, problem?.difficulty ?? undefined);
 	const [output, setOutput] = useState<string>(
 		"Run results will appear here.",
 	);
@@ -77,6 +78,8 @@ export default function GameSession({ slug }: { slug: string }) {
 	const languageSelectId = useId();
 	const updateCursorPosition = useMutation(api.games.updateCursorPosition);
 	const updateCodeState = useMutation(api.games.updateCodeState);
+	const submitScore = useMutation(api.games.submitScore);
+	const scores = useQuery(api.games.getScoresForGame, { slug: resolvedSlug });
 	const editorRef = useRef<MonacoEditorNS.IStandaloneCodeEditor | null>(null);
 	const cursorListenerRef = useRef<IDisposable | null>(null);
 	const pendingCursorRef = useRef<{ lineNumber: number; column: number } | null>(
@@ -455,22 +458,13 @@ export default function GameSession({ slug }: { slug: string }) {
 				outputText += `\n`;
 			});
 			
-			// Add AI feedback
-			if (feedback) {
-				outputText += `AI Feedback:\n`;
-				outputText += `============\n`;
-				outputText += `${feedback}\n\n`;
-			}
-			
-			// Note: AI no longer modifies user code, only evaluates it
-			
 			// Add overall result
 			if (summary.passedTests === summary.totalTests) {
 				outputText += `🎉 All tests passed! Excellent work!`;
 			} else if (summary.passedTests > 0) {
 				outputText += `📊 ${summary.totalTests - summary.passedTests} test(s) failed. Keep improving!`;
 			} else {
-				outputText += `🔧 All tests failed. Review the AI feedback above!`;
+				outputText += `🔧 All tests failed. Review the results above!`;
 			}
 			
 			setOutput(outputText);
@@ -479,7 +473,7 @@ export default function GameSession({ slug }: { slug: string }) {
 		}
 	};
 
-	const handleSubmit = () => {
+	const handleSubmit = async () => {
 		if (!code.trim()) {
 			setOutput("Please enter some code before submitting.");
 			return;
@@ -490,10 +484,88 @@ export default function GameSession({ slug }: { slug: string }) {
 			return;
 		}
 		
-		// For now, just run the tests and show results
-		// In the future, this could submit to a leaderboard or scoring system
-		handleRun();
-		setOutput(prev => prev + "\n\nSubmission: Code has been submitted for evaluation!");
+		setOutput("Submitting your solution for final evaluation...");
+		
+		try {
+			const response = await fetch("/api/evaluate", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					code,
+					language: selectedLanguage || "python",
+					testCases: testCases.testCases,
+					problemTitle: problem?.title,
+					problemDescription: problem?.content,
+				}),
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.error || "Failed to submit solution");
+			}
+
+			const data = await response.json();
+			const results = data.results;
+			const summary = data.summary;
+			const feedback = data.feedback;
+			
+			let outputText = `🎯 FINAL SUBMISSION RESULTS\n`;
+			outputText += `============================\n`;
+			outputText += `Status: ${summary.passedTests === summary.totalTests ? "✅ ACCEPTED" : "❌ REJECTED"}\n`;
+			outputText += `Score: ${summary.passedTests}/${summary.totalTests} tests passed\n`;
+			outputText += `Total time: ${summary.totalTime}ms\n\n`;
+			
+			results.forEach((result: any, index: number) => {
+				const status = result.passed ? "✅ PASSED" : "❌ FAILED";
+				
+				outputText += `Test Case ${result.testCase}: ${status}\n`;
+				outputText += `Input: ${result.input}\n`;
+				outputText += `Expected: ${result.expectedOutput}\n`;
+				outputText += `Actual: ${result.actualOutput}\n`;
+				outputText += `Time: ${result.executionTime}ms\n`;
+				
+				if (result.description) {
+					outputText += `Description: ${result.description}\n`;
+				}
+				
+				outputText += `\n`;
+			});
+			
+			// No feedback requested
+			
+			// Add final result
+			if (summary.passedTests === summary.totalTests) {
+				outputText += `🎉 CONGRATULATIONS! Your solution has been ACCEPTED!\n`;
+				outputText += `All test cases passed successfully. Great job! 🚀\n\n`;
+				outputText += `🏆 You have completed this problem! Your score has been recorded.`;
+				
+				// Submit score to mark player as done
+				try {
+					await submitScore({
+						slug: resolvedSlug,
+						clientId,
+						playerName: `Player ${clientId.slice(0, 8)}`,
+						score: Math.floor(summary.totalTime / 1000), // Convert to seconds
+					});
+					outputText += `\n✅ Score submitted successfully!`;
+				} catch (error) {
+					console.error("Failed to submit score:", error);
+					outputText += `\n⚠️ Score submission failed, but your solution is correct!`;
+				}
+			} else if (summary.passedTests > 0) {
+				outputText += `📊 PARTIAL SUCCESS: ${summary.totalTests - summary.passedTests} test(s) failed.\n`;
+				outputText += `Keep working on it - you're making progress! 💪`;
+			} else {
+				outputText += `🔧 SOLUTION REJECTED: All tests failed.\n`;
+				outputText += `Don't give up! Review the results above and try again! 🔄`;
+			}
+			
+			setOutput(outputText);
+		} catch (error) {
+			setOutput(`❌ Submission Error: ${error instanceof Error ? error.message : "Failed to submit solution"}`);
+		}
 	};
 
 	const parsedStats = useMemo(() => {
@@ -571,6 +643,11 @@ export default function GameSession({ slug }: { slug: string }) {
 									{testCases.testCases.length} Test Cases
 								</Badge>
 							)}
+							{scores && scores.length > 0 && (
+								<Badge variant="default" className="text-[0.65rem] bg-green-600 hover:bg-green-700">
+									{scores.length} Completed
+								</Badge>
+							)}
 						</div>
 					</div>
 					<div className="flex flex-col items-end gap-2 text-sm text-muted-foreground">
@@ -585,7 +662,7 @@ export default function GameSession({ slug }: { slug: string }) {
 								Game starting in {countdownSeconds}s
 							</p>
 						)}
-						{game?.status === "lobby" && (
+						{game?.status === "lobby" && game?.mode !== "solo" && (
 							<p className="text-muted-foreground">
 								Waiting for the host to begin the game…
 							</p>
@@ -611,7 +688,7 @@ export default function GameSession({ slug }: { slug: string }) {
 				</div>
 			</header>
 			<div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-8 lg:flex-row xl:gap-8">
-				<div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card lg:max-h-[calc(100vh-200px)] lg:basis-[38%] lg:shrink-0">
+				<div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card lg:max-h-[calc(100vh-200px)] lg:basis-[30%] lg:shrink-0">
 					<div className="flex items-center justify-between border-b border-border px-4 py-3">
 						<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
 							Description
@@ -750,11 +827,16 @@ export default function GameSession({ slug }: { slug: string }) {
 						<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
 							Output
 						</p>
-						<div className="mt-2 h-28 overflow-y-auto rounded-md bg-muted px-3 py-2 font-mono text-xs">
+						<div className="mt-2 h-40 max-h-40 overflow-y-auto rounded-md bg-muted px-3 py-2 font-mono text-xs whitespace-pre-wrap">
 							{output}
 						</div>
 					</div>
 				</div>
+				{game && (
+					<div className="lg:basis-[25%] lg:shrink-0">
+						<SpectatorChat gameId={game._id} />
+					</div>
+				)}
 			</div>
 		</div>
 	);

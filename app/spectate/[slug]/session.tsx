@@ -20,6 +20,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import SpectatorChat from "@/components/SpectatorChat";
 
 type VisibleParticipant = {
 	key: string;
@@ -44,6 +45,7 @@ export default function SpectateSession({ slug }: { slug: string }) {
 	const presence = useQuery(api.games.activePresence, { slug });
 	const cursorPositions = useQuery(api.games.activeCursorPositions, { slug });
 	const codeSnapshots = useQuery(api.games.activeCodeSnapshots, { slug });
+	const scores = useQuery(api.games.getScoresForGame, { slug });
 	const [countdownMs, setCountdownMs] = useState<number | null>(null);
 	const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 	const [viewerOpen, setViewerOpen] = useState(false);
@@ -165,8 +167,16 @@ export default function SpectateSession({ slug }: { slug: string }) {
 	}, [codeSnapshots]);
 
 	const eliminatedParticipants = useMemo<VisibleParticipant[]>(() => {
-		return [];
-	}, []);
+		if (!scores || scores.length === 0) return [];
+		
+		return scores.map((score) => ({
+			key: `completed-${score.clientId}`,
+			label: score.playerName,
+			lastSeen: score.submittedAt,
+			isGuest: score.userId === null,
+			clientId: score.clientId,
+		}));
+	}, [scores]);
 
 	const eliminatedSet = useMemo(() => {
 		return new Set(eliminatedParticipants.map((participant) => participant.key));
@@ -518,6 +528,7 @@ export default function SpectateSession({ slug }: { slug: string }) {
 								</div>
 							</CardContent>
 						</Card>
+						<SpectatorChat gameId={game._id} />
 						<Card>
 							<CardHeader>
 								<CardTitle className="text-lg">Jump into the action</CardTitle>
@@ -548,27 +559,41 @@ export default function SpectateSession({ slug }: { slug: string }) {
 						</Card>
 						<Card>
 							<CardHeader>
-								<CardTitle className="text-lg">Eliminated players</CardTitle>
+								<CardTitle className="text-lg">Completed players</CardTitle>
 								<CardDescription>
-									Players who are no longer active in this match.
+									Players who have successfully solved the problem.
 								</CardDescription>
 							</CardHeader>
 							<CardContent>
-								{eliminatedParticipants.length === 0 ? (
+								{scores && scores.length === 0 ? (
 									<p className="text-sm text-muted-foreground">
-										No eliminated players yet.
+										No completed players yet.
 									</p>
 								) : (
 									<div className="space-y-3">
-										{eliminatedParticipants.map((player) => (
+										{scores?.map((score, index) => (
 											<div
-												key={`eliminated-${player.key}`}
-												className="flex items-center justify-between rounded-lg border border-border bg-muted/40 p-3"
+												key={`completed-${score.clientId}`}
+												className="flex items-center justify-between rounded-lg border border-border bg-green-50 dark:bg-green-950/20 p-3"
 											>
-												<span className="text-sm font-medium text-foreground">
-													{player.label}
-												</span>
-												<Badge variant="secondary">Eliminated</Badge>
+												<div className="flex items-center gap-3">
+													<div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 text-sm font-semibold text-green-700 dark:text-green-300">
+														{index + 1}
+													</div>
+													<div>
+														<span className="text-sm font-medium text-foreground">
+															{score.playerName}
+														</span>
+														<p className="text-xs text-muted-foreground">
+															Completed at {new Date(score.submittedAt).toLocaleTimeString()}
+														</p>
+													</div>
+												</div>
+												<div className="text-right">
+													<Badge variant="default" className="bg-green-600 hover:bg-green-700">
+														{score.score}s
+													</Badge>
+												</div>
 											</div>
 										))}
 									</div>

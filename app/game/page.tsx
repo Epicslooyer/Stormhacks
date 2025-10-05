@@ -10,7 +10,7 @@ export default function GameHomePage() {
 				lobby to coordinate before entering the live match.
 			</p>
 					<div className="flex justify-center gap-4">
-						<CreateGameButton redirectBase="/lobby" label="Solo Game" mode="solo" />
+									<CreateGameButton redirectBase="/lobby" label="Play solo mode" mode="solo" />
 						<CreateGameButton redirectBase="/lobby" label="Multiplayer Lobby" mode="multiplayer" />
 					</div>
 			<p className="text-center text-sm">

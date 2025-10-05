@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useQuery as useConvexQuery, useMutation as useConvexMutation } from "convex/react";
+import { useQuery as useConvexQuery, useMutation as useConvexMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 export interface TestCase {
@@ -18,47 +18,13 @@ export interface TestCasesResponse {
   updatedAt: number;
 }
 
-export function useTestCases(slug: string | null | undefined) {
+export function useTestCases(slug: string | null | undefined, problemTitle?: string, problemDifficulty?: string) {
   // Use Convex directly for better performance and real-time updates
   const testCases = useConvexQuery(api.problems.getTestCases, 
     slug ? { problemSlug: slug } : "skip"
   );
   
-  const createOrUpdateTestCases = useConvexMutation(api.problems.createOrUpdateTestCases);
-  
-  // Fallback to API route for generation (since it handles OpenRouter)
-  const generateMutation = useMutation<TestCasesResponse, Error, void>({
-    mutationFn: async () => {
-      if (!slug) {
-        throw new Error("Problem slug is required");
-      }
-      
-      const response = await fetch(
-        `/api/testcases/${encodeURIComponent(slug)}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
-      );
-
-      if (!response.ok) {
-        let message = `Failed to generate test cases (${response.status})`;
-        try {
-          const errorBody = await response.json();
-          if (typeof errorBody?.error === "string") {
-            message = errorBody.error;
-          }
-        } catch (_error) {
-          // Ignore JSON parse errors, use default message.
-        }
-        throw new Error(message);
-      }
-
-      return (await response.json()) as TestCasesResponse;
-    },
-  });
+  const generateTestCases = useAction(api.problems.generateTestCases);
 
   return {
     testCases: testCases || null,
@@ -66,8 +32,16 @@ export function useTestCases(slug: string | null | undefined) {
     isError: false, // Convex handles errors internally
     error: null,
     refetch: () => {}, // Convex automatically refetches
-    generateTestCases: generateMutation.mutate,
-    isGenerating: generateMutation.isPending,
-    generateError: generateMutation.error,
+    generateTestCases: () => {
+      if (slug) {
+        return generateTestCases({ 
+          problemSlug: slug,
+          problemTitle,
+          problemDifficulty,
+        });
+      }
+    },
+    isGenerating: false, // Convex actions don't expose pending state directly
+    generateError: null,
   };
 }
