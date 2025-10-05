@@ -290,9 +290,9 @@ export const getGameWinner = query({
 			
 		const activePlayers = scores.filter(s => !s.isEliminated);
 		
-		if (activePlayers.length === 0) {
-			return { winner: null, isGameOver: true };
-		}
+        if (activePlayers.length === 0) {
+            return { winner: null, isGameOver: true };
+        }
 		
 		if (activePlayers.length === 1) {
 			const winner = activePlayers[0];
@@ -312,9 +312,17 @@ export const getGameWinner = query({
 		}
 		
 		// Sort by score to get the current leader
-		const sortedPlayers = activePlayers.sort((a, b) => 
-			(b.calculatedScore ?? 0) - (a.calculatedScore ?? 0)
-		);
+        const sortedPlayers = activePlayers.sort((a, b) => {
+            // Prefer players who finished (have completionTime) and higher calculatedScore
+            const aFinished = (a.testCasesPassed ?? 0) >= (a.totalTestCases ?? Infinity);
+            const bFinished = (b.testCasesPassed ?? 0) >= (b.totalTestCases ?? Infinity);
+            if (aFinished && !bFinished) return -1;
+            if (!aFinished && bFinished) return 1;
+            const scoreDelta = (b.calculatedScore ?? 0) - (a.calculatedScore ?? 0);
+            if (scoreDelta !== 0) return scoreDelta;
+            // Tie-breaker: faster completion time wins if both finished
+            return (a.completionTime ?? Infinity) - (b.completionTime ?? Infinity);
+        });
 		
 		const leader = sortedPlayers[0];
 		return {

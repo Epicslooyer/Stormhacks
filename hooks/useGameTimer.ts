@@ -40,25 +40,20 @@ export function useGameTimer(): GameTimerState & GameTimerActions {
   const start = useCallback(() => {
     setState(prev => {
       if (prev.isRunning) {
-        console.log("Timer already running, skipping start");
         return prev;
       }
 
       const now = Date.now();
-      console.log("Starting timer at:", now);
       
       // Start the timer interval
       intervalRef.current = setInterval(() => {
         setState(intervalPrev => {
           if (!intervalPrev.isRunning || !intervalPrev.startTime) {
-            console.log("Timer interval: not running or no start time", { isRunning: intervalPrev.isRunning, startTime: intervalPrev.startTime });
             return intervalPrev;
           }
           
           const now = Date.now();
           const elapsed = now - intervalPrev.startTime - intervalPrev.totalPausedTime;
-          
-          console.log("Timer interval update:", { now, startTime: intervalPrev.startTime, totalPausedTime: intervalPrev.totalPausedTime, elapsed });
           
           return {
             ...intervalPrev,

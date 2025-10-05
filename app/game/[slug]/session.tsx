@@ -135,15 +135,6 @@ export default function GameSession({ slug }: { slug: string }) {
 
 	// Start game timer automatically with robust guards and logs
 	useEffect(() => {
-		console.log("[TIMER] auto-start effect", {
-			mode: game?.mode ?? null,
-			status: game?.status ?? null,
-			countdownMs,
-			gameStarted,
-			alreadyStarted: timerStartedRef.current,
-			presenceCount,
-			participantsCount: participants.length,
-		});
 
 		// Prevent double-start
 		if (timerStartedRef.current) return;
@@ -151,7 +142,6 @@ export default function GameSession({ slug }: { slug: string }) {
 		// Solo detection: explicit solo mode OR inferred by presence/participants
 		const inferredSolo = game?.mode === "solo" || presenceCount <= 1 || participants.length <= 1;
 		if (inferredSolo) {
-			console.log("[TIMER] starting for solo (explicit or inferred)", { inferredSolo, presenceCount, participants: participants.length });
 			timerStartedRef.current = true;
 			setGameStarted(true);
 			gameTimer.start();
@@ -160,7 +150,6 @@ export default function GameSession({ slug }: { slug: string }) {
 
 		// Multiplayer: start on countdown end and active status
 		if (game?.status === "active" && countdownMs === 0) {
-			console.log("[TIMER] starting for multiplayer countdown end");
 			timerStartedRef.current = true;
 			setGameStarted(true);
 			gameTimer.start();
@@ -197,10 +186,10 @@ export default function GameSession({ slug }: { slug: string }) {
 		(editorInstance: MonacoEditorNS.IStandaloneCodeEditor) => {
 			editorRef.current = editorInstance;
 			cursorListenerRef.current?.dispose();
-			console.log("[TIMER] editor mounted", { mode: game?.mode, alreadyStarted: timerStartedRef.current });
+			// editor mounted
 			// Fallback: if solo and not started yet, start on editor mount
 			if (game?.mode === "solo" && !timerStartedRef.current) {
-				console.log("[TIMER] fallback start on editor mount (solo)");
+				// fallback start on editor mount (solo)
 				timerStartedRef.current = true;
 				setGameStarted(true);
 				gameTimer.start();
@@ -267,6 +256,10 @@ export default function GameSession({ slug }: { slug: string }) {
 
 	useEffect(() => {
 		const interval = setInterval(() => {
+			// Periodically run elimination threshold while game is active
+			if (game?.status === "active") {
+				void checkEliminationThreshold({ slug: resolvedSlug }).catch(() => {});
+			}
 			const pending = pendingCursorRef.current;
 			if (!pending) {
 				return;
@@ -992,7 +985,7 @@ export default function GameSession({ slug }: { slug: string }) {
 							<Button variant="outline" size="sm" onClick={handleRun}>
 								Run
 							</Button>
-							<Button size="sm" onClick={handleSubmit}>
+							<Button size="sm" onClick={handleSubmit} disabled={submitted}>
 								Submit
 							</Button>
 						</div>
@@ -1009,6 +1002,7 @@ export default function GameSession({ slug }: { slug: string }) {
 								fontSize: 14,
 								minimap: { enabled: false },
 								scrollBeyondLastLine: false,
+								readOnly: submitted,
 							}}
 							theme="vs-dark"
 							loading={
@@ -1030,7 +1024,7 @@ export default function GameSession({ slug }: { slug: string }) {
 				{/* Only show sidebar content if game is not completed; otherwise, redirect will occur */}
 				{game && game.status !== "completed" && (
 					<div className="flex flex-col gap-4 lg:basis-[25%] lg:shrink-0">
-						{leaderboard && leaderboard.leaderboard.length > 0 && (
+		{leaderboard && leaderboard.leaderboard.length > 0 && (
 							<div className="rounded-xl border border-border bg-card">
 								<div className="border-b border-border px-4 py-3">
 									<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -1038,7 +1032,7 @@ export default function GameSession({ slug }: { slug: string }) {
 									</p>
 								</div>
 								<div className="max-h-64 overflow-y-auto">
-									{leaderboard.leaderboard.slice(0, 10).map((player, index) => (
+					{leaderboard.leaderboard.slice(0, 10).map((player, index) => (
 										<div
 											key={player.clientId}
 											className={cn(
@@ -1060,9 +1054,12 @@ export default function GameSession({ slug }: { slug: string }) {
 												<div className="text-sm font-bold">
 													{formatScore(player.calculatedScore ?? 0)}
 												</div>
-												<div className="text-xs text-muted-foreground">
-													{formatTime(player.completionTime ?? 0)}
-												</div>
+								<div className="text-xs text-muted-foreground">
+									{/* If player hasn't finished, show LIVE; else show completion time */}
+									{(player.testCasesPassed ?? 0) >= (player.totalTestCases ?? Infinity)
+										? formatTime(player.completionTime ?? 0)
+										: (player.clientId === clientId ? `${gameTimer.getFormattedTime()} (LIVE)` : `In progress`)}
+								</div>
 											</div>
 										</div>
 									))}
