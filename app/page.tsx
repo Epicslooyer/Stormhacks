@@ -1,12 +1,39 @@
 "use client";
 
 import { useAuthActions } from "@convex-dev/auth/react";
+import {
+	Badge,
+	Box,
+	Button,
+	Container,
+	DialogBackdrop,
+	DialogBody,
+	DialogCloseTrigger,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogPositioner,
+	DialogRoot,
+	FieldHelperText,
+	FieldLabel,
+	FieldRoot,
+	Flex,
+	Heading,
+	HStack,
+	Input,
+	Link as ChakraLink,
+	SimpleGrid,
+	Spinner,
+	Stack,
+	Text,
+} from "@chakra-ui/react";
 import { useConvexAuth, useMutation } from "convex/react";
-import Link from "next/link";
+import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useState } from "react";
 import { useProblemDetails } from "@/components/useProblemDetails";
 import { api } from "@/convex/_generated/api";
+import { useColorModeValue } from "@/components/ui/color-mode";
 
 type ProblemOption = {
 	id: string;
@@ -39,40 +66,77 @@ const featuredProblems: ProblemOption[] = [
 ];
 
 export default function Home() {
+	const headerBg = useColorModeValue("white", "gray.900");
+	const headerBorder = useColorModeValue("gray.200", "gray.700");
+	const secondaryText = useColorModeValue("gray.600", "gray.400");
+
 	return (
-		<>
-			<header className="sticky top-0 z-10 bg-background p-4 border-b-2 border-slate-200 dark:border-slate-800 flex flex-row justify-between items-center">
-				<Link href="/" className="text-lg font-semibold">
-					Leet Royale
-				</Link>
-				<SignOutButton />
-			</header>
-			<main className="p-8 flex flex-col gap-10 max-w-4xl mx-auto">
-				<section className="flex flex-col gap-3 text-center">
-					<h1 className="text-4xl font-bold">Pick a problem to battle on</h1>
-					<p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-						Search the LeetCode problem set or start quickly with a featured
-						pick. We will spin up a shared lobby and keep everyone synced once
-						you start.
-					</p>
-					<div className="flex justify-center gap-4">
-						<Link
+		<Flex direction="column" minH="100dvh">
+			<Box
+				as="header"
+				position="sticky"
+				top={0}
+				zIndex={10}
+				bg={headerBg}
+				borderBottomWidth="1px"
+				borderColor={headerBorder}
+			>
+				<Container
+					maxW="6xl"
+					py={4}
+					display="flex"
+					alignItems="center"
+					justifyContent="space-between"
+				>
+					<ChakraLink
+						as={NextLink}
+						href="/"
+						fontWeight="semibold"
+						fontSize="lg"
+					>
+						Leet Royale
+					</ChakraLink>
+					<SignOutButton />
+				</Container>
+			</Box>
+			<Container
+				as="main"
+				maxW="4xl"
+				py={{ base: 10, md: 16 }}
+				display="flex"
+				flexDirection="column"
+				gap={10}
+			>
+				<Stack gap={3} textAlign="center" alignItems="center">
+					<Heading size="2xl">Pick a problem to battle on</Heading>
+					<Text fontSize="sm" maxW="2xl" color={secondaryText}>
+						Search the LeetCode problem set or start quickly with a featured pick.
+						We will spin up a shared lobby and keep everyone synced once you start.
+					</Text>
+					<HStack gap={4} justify="center">
+						<ChakraLink
+							as={NextLink}
 							href="/problems"
-							className="text-sm underline hover:no-underline text-foreground"
+							fontSize="sm"
+							textDecoration="underline"
+							_hover={{ textDecoration: "none" }}
 						>
 							Browse all problems
-						</Link>
-						<Link
+						</ChakraLink>
+						<ChakraLink
+							as={NextLink}
 							href="/lobby"
-							className="text-sm underline hover:no-underline text-foreground"
+							fontSize="sm"
+							textDecoration="underline"
+							_hover={{ textDecoration: "none" }}
 						>
 							View open lobbies
-						</Link>
-					</div>
-				</section>
+						</ChakraLink>
+					</HStack>
+				</Stack>
 				<ProblemPicker />
-			</main>
-		</>
+			</Container>
+		</Flex>
 	);
 }
 
@@ -81,9 +145,10 @@ function SignOutButton() {
 	const { signOut } = useAuthActions();
 	const router = useRouter();
 	return isAuthenticated ? (
-		<button
-			type="button"
-			className="bg-slate-200 dark:bg-slate-800 text-foreground rounded-md px-2 py-1"
+		<Button
+			size="sm"
+			variant="subtle"
+			colorPalette="gray"
 			onClick={() =>
 				void signOut().then(() => {
 					router.push("/signin");
@@ -91,7 +156,7 @@ function SignOutButton() {
 			}
 		>
 			Sign out
-		</button>
+		</Button>
 	) : null;
 }
 
@@ -164,116 +229,140 @@ function ProblemPicker() {
 		}
 	};
 
+	const helperColor = useColorModeValue("gray.600", "gray.400");
+	const cardBg = useColorModeValue("gray.50", "whiteAlpha.100");
+	const cardBorder = useColorModeValue("gray.200", "gray.700");
+
 	return (
-		<>
-			<section className="flex flex-col gap-6">
-				<div className="flex flex-col gap-2">
-					<label htmlFor={searchInputId} className="text-sm font-semibold">
+		<Box display="flex" flexDirection="column" gap={6}>
+			<Stack gap={2}>
+				<FieldRoot id={searchInputId} gap={2}>
+					<FieldLabel htmlFor={searchInputId} fontSize="sm" fontWeight="semibold">
 						Search problems
-					</label>
-					<input
+					</FieldLabel>
+					<Input
 						id={searchInputId}
 						type="search"
 						value={query}
 						onChange={(event) => setQuery(event.target.value)}
 						placeholder="Type at least two characters to search the LeetCode catalog"
-						className="w-full rounded-md border border-slate-200 dark:border-slate-800 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-foreground"
+						size="md"
+						autoComplete="off"
 					/>
-					{hasSearch ? (
-						<p className="text-xs text-slate-500 dark:text-slate-400">
-							Showing search results from the LeetCode dataset.
-						</p>
-					) : (
-						<p className="text-xs text-slate-500 dark:text-slate-400">
-							Need inspiration? Start with one of the featured problems below.
-						</p>
-					)}
-					{error && <p className="text-xs text-red-500">{error}</p>}
-				</div>
-				<div className="flex flex-col gap-4">
-					{loading && (
-						<p className="text-sm text-slate-500 dark:text-slate-400">
-							Searching…
-						</p>
-					)}
-					{!loading && hasSearch && problems.length === 0 && (
-						<p className="text-sm text-slate-500 dark:text-slate-400">
-							No problems match that query.
-						</p>
-					)}
-					<ul className="grid gap-4 sm:grid-cols-2">
-						{problems.map((problem) => (
-							<li
-								key={`${problem.slug}-${problem.id}`}
-								className="flex flex-col gap-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-200/60 dark:bg-slate-800/60 p-4"
-							>
-								<div className="flex items-start justify-between gap-3">
-									<div className="flex flex-col gap-1">
-										<p className="text-base font-semibold leading-tight">
-											{problem.title}
-										</p>
-										<p className="text-xs text-slate-500 dark:text-slate-400">
-											Slug: {problem.slug}
-										</p>
-									</div>
-									<span className={difficultyBadgeClass(problem.difficulty)}>
-										{problem.difficulty}
-									</span>
-								</div>
-								<div className="flex items-center justify-between gap-3">
-									<button
-										type="button"
-										className="text-xs underline hover:no-underline text-foreground"
-										onClick={() => setPreviewProblem(problem)}
-									>
-										Preview details
-									</button>
-									<button
-										type="button"
-										className="bg-foreground text-background text-xs sm:text-sm px-3 py-2 rounded-md disabled:opacity-50"
-										disabled={pendingSlug !== null}
-										onClick={() => handleStart(problem)}
-									>
-										{pendingSlug === problem.slug ? "Creating…" : "Start lobby"}
-									</button>
-								</div>
-							</li>
-						))}
-					</ul>
-				</div>
-			</section>
-			{previewProblem && (
-				<ProblemDetailModal
-					problem={previewProblem}
-					onClose={() => setPreviewProblem(null)}
-				/>
-			)}
-		</>
+					<FieldHelperText fontSize="xs" color={helperColor}>
+						{hasSearch
+							? "Showing search results from the LeetCode dataset."
+							: "Need inspiration? Start with one of the featured problems below."}
+					</FieldHelperText>
+				</FieldRoot>
+				{error && (
+					<Text fontSize="xs" color="red.500">
+						{error}
+					</Text>
+				)}
+			</Stack>
+			<Stack gap={4}>
+				{loading && (
+					<HStack gap={2} color={helperColor}>
+						<Spinner size="sm" />
+						<Text fontSize="sm">Searching…</Text>
+					</HStack>
+				)}
+				{!loading && hasSearch && problems.length === 0 && (
+					<Text fontSize="sm" color={helperColor}>
+						No problems match that query.
+					</Text>
+				)}
+				<SimpleGrid
+					as="ul"
+					columns={{ base: 1, sm: 2 }}
+					gap={4}
+					listStyleType="none"
+					m={0}
+					p={0}
+				>
+					{problems.map((problem) => (
+						<Box
+							as="li"
+							key={`${problem.slug}-${problem.id}`}
+							display="flex"
+							flexDirection="column"
+							gap={3}
+							p={4}
+							borderWidth="1px"
+							borderColor={cardBorder}
+							bg={cardBg}
+							borderRadius="lg"
+						>
+							<Flex align="flex-start" justify="space-between" gap={3}>
+						<Stack gap={1}>
+									<Text fontWeight="semibold" fontSize="md" lineHeight="short">
+										{problem.title}
+									</Text>
+									<Text fontSize="xs" color={helperColor}>
+										Slug: {problem.slug}
+									</Text>
+								</Stack>
+								<Badge
+									variant="subtle"
+									colorPalette={difficultyBadgePalette(problem.difficulty)}
+									fontSize="xs"
+									fontWeight="semibold"
+									textTransform="uppercase"
+									px={2}
+									py={1}
+									borderRadius="md"
+								>
+									{problem.difficulty}
+								</Badge>
+							</Flex>
+							<Flex align="center" justify="space-between" gap={3}>
+								<Button
+									variant="plain"
+									size="xs"
+									colorPalette="gray"
+									onClick={() => setPreviewProblem(problem)}
+								>
+									Preview details
+								</Button>
+								<Button
+									size={{ base: "sm", sm: "md" }}
+									colorPalette="gray"
+									fontWeight="semibold"
+									disabled={
+									pendingSlug !== null && pendingSlug !== problem.slug
+									}
+									loading={pendingSlug === problem.slug}
+									onClick={() => handleStart(problem)}
+								>
+									Start lobby
+								</Button>
+							</Flex>
+						</Box>
+					))}
+				</SimpleGrid>
+			</Stack>
+			<ProblemDetailModal
+				isOpen={previewProblem !== null}
+				problem={previewProblem}
+				onClose={() => setPreviewProblem(null)}
+			/>
+		</Box>
 	);
 }
 
 function ProblemDetailModal({
+	isOpen,
 	problem,
 	onClose,
 }: {
-	problem: ProblemOption;
+	isOpen: boolean;
+	problem: ProblemOption | null;
 	onClose: () => void;
 }) {
-	const { data, isPending, isError, error } = useProblemDetails(problem.slug);
+	const { data, isPending, isError, error } = useProblemDetails(problem?.slug);
 	const titleId = useId();
 	const contentId = useId();
-
-	useEffect(() => {
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === "Escape") {
-				onClose();
-			}
-		};
-		window.addEventListener("keydown", handleKeyDown);
-		return () => {
-			window.removeEventListener("keydown", handleKeyDown);
-		};
-	}, [onClose]);
 
 	let parsedStats: Record<string, unknown> | null = null;
 	if (data?.stats) {
@@ -303,119 +392,179 @@ function ProblemDetailModal({
 		() => sanitizeLeetCodeHtml(contentHtml),
 		[contentHtml],
 	);
+	const helperColor = useColorModeValue("gray.600", "gray.400");
+	const modalBodyText = useColorModeValue("gray.700", "gray.200");
+	const tagBg = useColorModeValue("gray.100", "whiteAlpha.200");
+	const tagColor = useColorModeValue("gray.700", "gray.200");
+	const modalBg = useColorModeValue("white", "gray.900");
 
-	const handleBackdropMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
-		if (event.currentTarget === event.target) {
-			onClose();
-		}
-	};
+	if (!problem) {
+		return null;
+	}
 
 	return (
-		<div
-			className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
-			role="dialog"
-			aria-modal="true"
-			aria-labelledby={titleId}
-			aria-describedby={contentId}
-			onMouseDown={handleBackdropMouseDown}
+		<DialogRoot
+			open={isOpen}
+			onOpenChange={(details) => {
+				if (!details.open) {
+					onClose();
+				}
+			}}
 		>
-			<div className="relative w-full max-w-3xl max-h-[85vh] overflow-hidden rounded-lg bg-background p-6 shadow-xl">
-				<header className="flex items-start justify-between gap-4">
-					<div className="flex flex-col gap-1">
-						<h2 id={titleId} className="text-2xl font-semibold leading-tight">
-							{data?.title ?? problem.title}
-						</h2>
-						<p className="text-sm text-slate-500 dark:text-slate-400">
-							{problem.slug}
-						</p>
-						<div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-							<span
-								className={difficultyBadgeClass(
-									data?.difficulty ?? problem.difficulty,
-								)}
-							>
-								{data?.difficulty ?? problem.difficulty}
-							</span>
-							{acceptance && <span>Acceptance: {acceptance}</span>}
-							{typeof data?.likes === "number" && (
-								<span>Likes: {data.likes}</span>
-							)}
-							{typeof data?.dislikes === "number" && (
-								<span>Dislikes: {data.dislikes}</span>
-							)}
-						</div>
-					</div>
-					<button
-						type="button"
-						className="text-sm underline hover:no-underline text-foreground"
-						onClick={onClose}
-					>
-						Close
-					</button>
-				</header>
-				<div
-					className="mt-4 flex flex-col gap-3 overflow-y-auto pr-1"
-					id={contentId}
+			<DialogBackdrop backdropFilter="blur(6px)" bg="blackAlpha.600" />
+			<DialogPositioner px={4}>
+				<DialogContent
+					aria-labelledby={titleId}
+					aria-describedby={contentId}
+					maxW="3xl"
+					w="full"
+					maxH="85vh"
+					overflow="hidden"
+					borderRadius="lg"
+					bg={modalBg}
+					shadow="xl"
+					p={6}
+					display="flex"
+					flexDirection="column"
+					gap={6}
 				>
+					<DialogCloseTrigger
+						aria-label="Close problem details"
+						position="absolute"
+						top={4}
+						right={4}
+					/>
+					<DialogHeader p={0}>
+						<Stack gap={2}>
+							<Heading id={titleId} size="lg">
+								{data?.title ?? problem.title}
+							</Heading>
+							<Text fontSize="sm" color={helperColor}>
+								{problem.slug}
+							</Text>
+						<HStack gap={2} flexWrap="wrap" fontSize="xs" color={helperColor}>
+								<Badge
+									variant="subtle"
+									colorPalette={difficultyBadgePalette(
+										data?.difficulty ?? problem.difficulty,
+									)}
+									fontWeight="semibold"
+									textTransform="uppercase"
+									px={2}
+									py={1}
+									borderRadius="md"
+								>
+									{data?.difficulty ?? problem.difficulty}
+								</Badge>
+								{acceptance && <Text>Acceptance: {acceptance}</Text>}
+								{typeof data?.likes === "number" && <Text>Likes: {data.likes}</Text>}
+								{typeof data?.dislikes === "number" && (
+									<Text>Dislikes: {data.dislikes}</Text>
+								)}
+							</HStack>
+						</Stack>
+					</DialogHeader>
+					<DialogBody
+						id={contentId}
+						display="flex"
+						flexDirection="column"
+						gap={3}
+						color={modalBodyText}
+						p={0}
+					>
 					{isPending && (
-						<p className="text-sm text-slate-500 dark:text-slate-400">
-							Loading problem details…
-						</p>
-					)}
-					{isError && !isPending && (
-						<p className="text-sm text-red-500">
-							Failed to load problem details: {modalError}
-						</p>
-					)}
-					{!isPending && !isError && (
-						<>
-							{topicTags.length > 0 && (
-								<div className="flex flex-wrap gap-2">
-									{topicTags.map((tag) => (
-										<span
-											key={String(tag?.slug ?? tag?.name)}
-											className="rounded-full bg-slate-200/60 dark:bg-slate-800/60 px-2 py-1 text-xs"
-										>
-											{String(tag?.name ?? tag?.slug)}
-										</span>
-									))}
-								</div>
-							)}
-							{(totalSubmissions !== null || totalAccepted !== null) && (
-								<p className="text-xs text-slate-500 dark:text-slate-400">
-									{totalAccepted !== null &&
-										`Accepted: ${totalAccepted.toLocaleString()} · `}
-									{totalSubmissions !== null &&
-										`Submissions: ${totalSubmissions.toLocaleString()}`}
-								</p>
-							)}
-							<div
-								className="prose prose-sm dark:prose-invert max-w-none"
-								// biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized LeetCode problem markup
-								dangerouslySetInnerHTML={{ __html: sanitizedContent }}
-							/>
-						</>
-					)}
-				</div>
-				<footer className="mt-6 flex flex-wrap items-center justify-between gap-3 text-sm">
-					<a
-						href={`https://leetcode.com/problems/${problem.slug}/`}
-						target="_blank"
-						rel="noreferrer noopener"
-						className="underline hover:no-underline text-foreground"
-					>
-						Open on LeetCode
-					</a>
-					<button
-						type="button"
-						className="bg-foreground text-background px-4 py-2 rounded-md"
-						onClick={onClose}
-					>
-						Close
-					</button>
-				</footer>
-			</div>
-		</div>
+						<HStack gap={2} color={helperColor}>
+								<Spinner size="sm" />
+								<Text fontSize="sm">Loading problem details…</Text>
+							</HStack>
+						)}
+						{isError && !isPending && (
+							<Text fontSize="sm" color="red.500">
+								Failed to load problem details: {modalError}
+							</Text>
+						)}
+						{!isPending && !isError && (
+							<Stack gap={3}>
+								{topicTags.length > 0 && (
+									<HStack gap={2} flexWrap="wrap">
+										{topicTags.map((tag) => (
+											<Badge
+												key={String(tag?.slug ?? tag?.name)}
+												bg={tagBg}
+												color={tagColor}
+												fontSize="xs"
+												borderRadius="full"
+											>
+												{String(tag?.name ?? tag?.slug)}
+											</Badge>
+										))}
+									</HStack>
+								)}
+								{(totalSubmissions !== null || totalAccepted !== null) && (
+									<Text fontSize="xs" color={helperColor}>
+										{totalAccepted !== null &&
+											`Accepted: ${totalAccepted.toLocaleString()} · `}
+										{totalSubmissions !== null &&
+											`Submissions: ${totalSubmissions.toLocaleString()}`}
+									</Text>
+								)}
+								<ModalContentBody sanitizedContent={sanitizedContent} />
+							</Stack>
+						)}
+					</DialogBody>
+					<DialogFooter display="flex" justifyContent="space-between" gap={3} p={0}>
+						<ChakraLink
+							href={`https://leetcode.com/problems/${problem.slug}/`}
+							target="_blank"
+							rel="noreferrer"
+							fontSize="sm"
+							textDecoration="underline"
+							_hover={{ textDecoration: "none" }}
+						>
+							Open on LeetCode
+						</ChakraLink>
+						<Button onClick={onClose} colorPalette="gray">
+							Close
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</DialogPositioner>
+		</DialogRoot>
+	);
+}
+
+function ModalContentBody({ sanitizedContent }: { sanitizedContent: string }) {
+	const codeBlockBg = useColorModeValue("gray.100", "gray.800");
+
+	return (
+		<Box
+			fontSize="sm"
+			lineHeight="tall"
+			css={{
+				"& > *:not(:last-child)": {
+					marginBottom: 3,
+				},
+				"& h1, & h2, & h3": {
+					fontWeight: "semibold",
+					marginTop: 4,
+				},
+				"& ul, & ol": {
+					paddingInlineStart: 4,
+					marginBottom: 3,
+				},
+				"& pre": {
+					padding: 3,
+					borderRadius: "md",
+					overflowX: "auto",
+					bg: codeBlockBg,
+				},
+				"& code": {
+					fontFamily: "mono",
+				},
+			}}
+			// biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized LeetCode problem markup
+			dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+		/>
 	);
 }
 
@@ -448,16 +597,16 @@ function difficultyLabel(level: number) {
 	}
 }
 
-function difficultyBadgeClass(difficulty: string) {
+function difficultyBadgePalette(difficulty: string) {
 	switch (difficulty) {
 		case "Easy":
-			return "text-xs font-semibold uppercase tracking-wide bg-emerald-200/60 dark:bg-emerald-800/60 text-emerald-900 dark:text-emerald-200 px-2 py-1 rounded";
+			return "teal";
 		case "Medium":
-			return "text-xs font-semibold uppercase tracking-wide bg-amber-200/60 dark:bg-amber-800/60 text-amber-900 dark:text-amber-100 px-2 py-1 rounded";
+			return "orange";
 		case "Hard":
-			return "text-xs font-semibold uppercase tracking-wide bg-rose-200/60 dark:bg-rose-800/60 text-rose-900 dark:text-rose-100 px-2 py-1 rounded";
+			return "red";
 		default:
-			return "text-xs font-semibold uppercase tracking-wide bg-slate-200/60 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 px-2 py-1 rounded";
+			return "gray";
 	}
 }
 
