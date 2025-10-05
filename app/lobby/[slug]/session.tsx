@@ -39,7 +39,7 @@ export default function LobbySession({ slug }: { slug: string }) {
 		isLoading: testCasesLoading, 
 		generateTestCases, 
 		isGenerating: testCasesGenerating 
-	} = useTestCases(problemSlug);
+	} = useTestCases(problemSlug, game?.problemTitle, game?.problemDifficulty);
 
 	const status = game?.status ?? "lobby";
 	const countdownSeconds =

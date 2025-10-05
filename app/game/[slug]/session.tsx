@@ -54,7 +54,7 @@ export default function GameSession({ slug }: { slug: string }) {
 	} = useProblemDetails(problemSlug);
 	
 	// Test cases for code execution
-	const { testCases } = useTestCases(problemSlug);
+	const { testCases } = useTestCases(problemSlug, problem?.title, problem?.difficulty);
 	const [output, setOutput] = useState<string>(
 		"Run results will appear here.",
 	);
