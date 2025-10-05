@@ -403,6 +403,7 @@ import { mutation, query } from "./_generated/server";
 const PRESENCE_TTL = 1000 * 15;
 const CURSOR_TTL = 1000 * 10;
 const CODE_TTL = 1000 * 20;
+const LOBBY_MAX_AGE_MS = 1000 * 60 * 60;
 
 const gameStatusValidator = v.union(
 	v.literal("lobby"),
@@ -873,6 +874,7 @@ export const listGamesByStatus = query({
 		}
 		const now = Date.now();
 		const cutoff = now - PRESENCE_TTL;
+		const lobbyCutoff = now - LOBBY_MAX_AGE_MS;
 		const games = (
 			await Promise.all(
 				args.statuses.map((status) =>
@@ -884,7 +886,12 @@ export const listGamesByStatus = query({
 			)
 		)
 			.flat()
-			.sort((a, b) => b.createdAt - a.createdAt);
+			.sort((a, b) => b.createdAt - a.createdAt)
+			.filter(
+				(game) =>
+					game.status !== "lobby" ||
+					(game.createdAt ?? 0) >= lobbyCutoff,
+			);
 
 		const enriched = await Promise.all(
 			games.map(async (game) => {
