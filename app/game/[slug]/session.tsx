@@ -17,8 +17,11 @@ import {
 import { cn } from "@/lib/utils";
 import { useGameConnection } from "@/components/useGameConnection";
 import { useProblemDetails } from "@/components/useProblemDetails";
+import { useTestCases } from "@/components/useTestCases";
+import { CodeExecutor } from "@/components/CodeExecutor";
 import type { CodeSnippet } from "leetcode-query";
 import { api } from "@/convex/_generated/api";
+// @ts-ignore - monaco-editor types not available
 import type { editor as MonacoEditorNS, IDisposable } from "monaco-editor";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
@@ -48,6 +51,9 @@ export default function GameSession({ slug }: { slug: string }) {
 		isError: problemError,
 		error: problemErrorObject,
 	} = useProblemDetails(problemSlug);
+	
+	// Test cases for code execution
+	const { testCases } = useTestCases(problemSlug);
 	const [output, setOutput] = useState<string>(
 		"Run results will appear here.",
 	);
@@ -72,7 +78,7 @@ export default function GameSession({ slug }: { slug: string }) {
 			editorRef.current = editorInstance;
 			cursorListenerRef.current?.dispose();
 			cursorListenerRef.current = editorInstance.onDidChangeCursorPosition(
-				(event) => {
+				(event: any) => {
 					pendingCursorRef.current = {
 						lineNumber: event.position.lineNumber,
 						column: event.position.column,
@@ -200,16 +206,105 @@ export default function GameSession({ slug }: { slug: string }) {
 		setSelectedLanguage(value);
 	};
 
-	const handleRun = () => {
-		setOutput(
-			"Code execution is not available in this preview environment. Coordinate with your team to verify solutions.",
-		);
+	const handleRun = async () => {
+		if (!code.trim()) {
+			setOutput("Please enter some code to execute.");
+			return;
+		}
+
+		if (!testCases || testCases.testCases.length === 0) {
+			setOutput("No test cases available. Please generate test cases first in the lobby.");
+			return;
+		}
+
+		setOutput("AI is analyzing and executing your code...");
+
+		try {
+			const response = await fetch("/api/evaluate", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					code,
+					language: selectedLanguage || "python",
+					testCases: testCases.testCases,
+					problemTitle: problem?.title,
+					problemDescription: problem?.description,
+				}),
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.error || "Failed to evaluate code");
+			}
+
+			const data = await response.json();
+			const results = data.results;
+			const summary = data.summary;
+			const feedback = data.feedback;
+			const cleanedCode = data.cleanedCode;
+			
+			let outputText = `AI-Powered Code Evaluation Results\n`;
+			outputText += `==================================\n`;
+			outputText += `Summary: ${summary.passedTests}/${summary.totalTests} tests passed\n`;
+			outputText += `Total time: ${summary.totalTime}ms\n\n`;
+			
+			results.forEach((result: any, index: number) => {
+				const status = result.passed ? "PASSED" : "FAILED";
+				
+				outputText += `Test Case ${result.testCase}: ${status}\n`;
+				outputText += `Input: ${result.input}\n`;
+				outputText += `Expected: ${result.expectedOutput}\n`;
+				outputText += `Actual: ${result.actualOutput}\n`;
+				outputText += `Time: ${result.executionTime}ms\n`;
+				
+				if (result.description) {
+					outputText += `Description: ${result.description}\n`;
+				}
+				
+				outputText += `\n`;
+			});
+			
+			// Add AI feedback
+			if (feedback) {
+				outputText += `AI Feedback:\n`;
+				outputText += `============\n`;
+				outputText += `${feedback}\n\n`;
+			}
+			
+			// Note: AI no longer modifies user code, only evaluates it
+			
+			// Add overall result
+			if (summary.passedTests === summary.totalTests) {
+				outputText += `🎉 All tests passed! Excellent work!`;
+			} else if (summary.passedTests > 0) {
+				outputText += `📊 ${summary.totalTests - summary.passedTests} test(s) failed. Keep improving!`;
+			} else {
+				outputText += `🔧 All tests failed. Review the AI feedback above!`;
+			}
+			
+			setOutput(outputText);
+		} catch (error) {
+			setOutput(`Error: ${error instanceof Error ? error.message : "Failed to evaluate code"}`);
+		}
 	};
 
 	const handleSubmit = () => {
-		setOutput(
-			"Submission is not yet implemented. Share your final answer with the host when ready.",
-		);
+		if (!code.trim()) {
+			setOutput("Please enter some code before submitting.");
+			return;
+		}
+		
+		if (!testCases || testCases.testCases.length === 0) {
+			setOutput("No test cases available. Please generate test cases first in the lobby.");
+			return;
+		}
+		
+		// For now, just run the tests and show results
+		// In the future, this could submit to a leaderboard or scoring system
+		handleRun();
+		setOutput(prev => prev + "\n\nSubmission: Code has been submitted for evaluation!");
 	};
 
 	const parsedStats = useMemo(() => {
@@ -280,6 +375,11 @@ export default function GameSession({ slug }: { slug: string }) {
 									)}
 								>
 									{difficultyLabel}
+								</Badge>
+							)}
+							{testCases && testCases.testCases.length > 0 && (
+								<Badge variant="outline" className="text-[0.65rem]">
+									{testCases.testCases.length} Test Cases
 								</Badge>
 							)}
 						</div>
@@ -405,6 +505,11 @@ export default function GameSession({ slug }: { slug: string }) {
 							>
 								Language
 							</Label>
+							{testCases && testCases.testCases.length > 0 && (
+								<p className="text-xs text-muted-foreground">
+									Write a function that takes the input and returns the expected output
+								</p>
+							)}
 							<Select
 								disabled={codeSnippets.length === 0}
 								value={selectedLanguage ?? undefined}
