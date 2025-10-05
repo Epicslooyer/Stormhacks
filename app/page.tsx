@@ -8,16 +8,25 @@ import { HomeBackdrop } from "@/components/home/HomeBackdrop";
 import { useId } from "react";
 
 export default function HomePage() {
-	const pageGradient = useColorModeValue(
-		"linear-gradient(to bottom, rgba(237, 233, 254, 0.9), #ffffff)",
-		"linear-gradient(to bottom, rgba(15, 23, 42, 0.95), rgba(76, 29, 149, 0.85))",
+	const pageBackground = useColorModeValue(
+		[
+			"radial-gradient(900px at 85% 0%, rgba(249, 211, 99, 0.35), transparent 60%)",
+			"radial-gradient(700px at 15% 95%, rgba(59, 130, 246, 0.25), transparent 65%)",
+			"linear-gradient(to bottom, rgba(226, 238, 255, 0.92), #ffffff)",
+		].join(", "),
+		[
+			"radial-gradient(820px at 85% 0%, rgba(250, 198, 70, 0.3), transparent 58%)",
+			"radial-gradient(640px at 18% 85%, rgba(37, 99, 235, 0.22), transparent 65%)",
+			"linear-gradient(to bottom, rgba(10, 27, 70, 0.95), rgba(6, 21, 58, 0.9))",
+		].join(", "),
 	);
+	const pageBackgroundColor = useColorModeValue("#0a2d76", "#040f2f");
 	const explorerId = useId();
 
 	return (
 		<div
 			className="relative flex min-h-screen flex-col overflow-hidden"
-			style={{ backgroundImage: pageGradient }}
+			style={{ backgroundImage: pageBackground, backgroundColor: pageBackgroundColor }}
 		>
 			<HomeBackdrop />
 			<HomeHeader />

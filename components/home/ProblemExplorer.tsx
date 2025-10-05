@@ -90,12 +90,12 @@ export function ProblemExplorer({ sectionId }: { sectionId: string }) {
 
 	return (
 		<section id={sectionId} className="flex flex-col gap-8 md:gap-10">
-			<div className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/80 p-6 shadow-[0_32px_64px_-40px_rgba(76,29,149,0.6)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/80 dark:shadow-[0_32px_64px_-38px_rgba(129,140,248,0.4)] md:p-10">
-				<div className="pointer-events-none absolute inset-0 opacity-50" style={{ backgroundImage: "radial-gradient(700px at 10% 20%, rgba(214, 188, 250, 0.45), transparent 60%)" }} />
-				<div className="pointer-events-none absolute -top-[30%] -right-[10%] h-[120%] w-[60%] blur-sm md:w-[45%]" style={{ backgroundImage: "radial-gradient(circle, rgba(129, 230, 217, 0.18), transparent 70%)" }} />
+				<div className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/90 p-6 shadow-[0_32px_64px_-42px_rgba(12,45,126,0.55)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/85 dark:shadow-[0_32px_64px_-38px_rgba(24,84,189,0.45)] md:p-10">
+				<div className="pointer-events-none absolute inset-0 opacity-50" style={{ backgroundImage: "radial-gradient(700px at 12% 22%, rgba(247, 211, 84, 0.4), transparent 62%)" }} />
+				<div className="pointer-events-none absolute -top-[30%] -right-[10%] h-[120%] w-[60%] blur-sm md:w-[45%]" style={{ backgroundImage: "radial-gradient(circle, rgba(64, 142, 255, 0.22), transparent 72%)" }} />
 				<div className="relative flex flex-col gap-6">
 					<div className="flex flex-col gap-3 md:gap-4">
-						<Badge className="w-fit rounded-full border border-purple-200/60 bg-purple-50/80 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-purple-600 dark:border-purple-500/30 dark:bg-purple-500/15 dark:text-purple-100">
+					<Badge className="w-fit rounded-full border border-amber-300/60 bg-amber-100/80 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-[#0d2f6f] dark:border-amber-400/40 dark:bg-amber-400/20 dark:text-[#f8e7a3]">
 							Problem library
 						</Badge>
 						<div className="max-w-3xl space-y-3">
@@ -129,11 +129,11 @@ export function ProblemExplorer({ sectionId }: { sectionId: string }) {
 									: "Need inspiration? Start with one of the featured problems below."}
 							</p>
 						</div>
-						<div className="flex flex-wrap items-center justify-between gap-3">
-							<p className="text-sm text-slate-600 dark:text-slate-400">
+				<div className="flex flex-wrap items-center justify-between gap-3">
+					<p className="text-sm text-slate-600 dark:text-slate-400">
 								{loading ? "Hang tight while we search…" : "Pick a problem to start a synchronized lobby."}
 							</p>
-							<Badge className="rounded-full border border-purple-200/60 bg-purple-50/70 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-purple-700 dark:border-purple-500/30 dark:bg-purple-500/15 dark:text-purple-100">
+					<Badge className="rounded-full border border-amber-300/60 bg-amber-100/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#0d2f6f] dark:border-amber-400/40 dark:bg-amber-400/20 dark:text-[#f8e7a3]">
 								{resultLabel}
 							</Badge>
 						</div>
@@ -183,8 +183,8 @@ function ProblemCard({
 	isDisabled: boolean;
 }) {
 	return (
-		<li className="relative flex flex-col gap-4 overflow-hidden rounded-3xl border border-purple-200/60 bg-white/80 p-5 shadow-md transition-all hover:-translate-y-1 hover:shadow-xl dark:border-purple-500/20 dark:bg-slate-950/70">
-			<div className="pointer-events-none absolute -right-1/4 -top-1/3 h-3/4 w-1/2 rotate-6 bg-gradient-to-br from-purple-500/35 to-transparent blur-2xl" />
+	<li className="relative flex flex-col gap-4 overflow-hidden rounded-3xl border border-amber-300/60 bg-white/90 p-5 shadow-md transition-all hover:-translate-y-1 hover:shadow-xl dark:border-amber-400/30 dark:bg-slate-950/70">
+		<div className="pointer-events-none absolute -right-1/4 -top-1/3 h-3/4 w-1/2 rotate-6 bg-gradient-to-br from-[#f0b42933] to-transparent blur-2xl" />
 			<div className="relative flex items-start justify-between gap-3">
 				<div className="space-y-2">
 					<h3 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -197,23 +197,23 @@ function ProblemCard({
 				</Badge>
 			</div>
 			<div className="relative flex flex-wrap items-center justify-between gap-3">
-				<Button
-					variant="ghost"
-					size="sm"
-					onClick={onPreview}
-					className="text-purple-600 hover:bg-purple-50 hover:text-purple-700 dark:text-purple-200 dark:hover:bg-purple-500/20 dark:hover:text-purple-100"
+		<Button
+			variant="ghost"
+			size="sm"
+			onClick={onPreview}
+			className="text-[#0d2f6f] hover:bg-amber-100/60 hover:text-[#0a2158] dark:text-[#f8e7a3] dark:hover:bg-amber-400/20 dark:hover:text-white"
 				>
 					<FiBookOpen className="h-4 w-4" />
 					<span className="ml-2">Preview</span>
 				</Button>
-				<Button
-					size="sm"
-					onClick={onStart}
-					disabled={isDisabled}
-					className={cn(
-						"flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-400 text-white shadow-lg transition hover:from-purple-600 hover:to-pink-500",
-						isDisabled && "opacity-70",
-					)}
+		<Button
+			size="sm"
+			onClick={onStart}
+			disabled={isDisabled}
+			className={cn(
+				"flex items-center gap-2 bg-gradient-to-r from-[#f7d354] via-[#f0b429] to-[#d98e2b] text-slate-900 shadow-lg transition hover:from-[#fbe08e] hover:via-[#f2c15a] hover:to-[#e0a040]",
+				isDisabled && "opacity-70",
+			)}
 				>
 					{isLoading ? (
 						<Loader2 className="h-4 w-4 animate-spin" />

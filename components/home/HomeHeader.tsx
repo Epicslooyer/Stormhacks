@@ -11,7 +11,7 @@ export function HomeHeader() {
 		<header className="sticky top-0 z-10 border-b border-white/60 bg-white/90 backdrop-blur-xl shadow-sm dark:border-white/20 dark:bg-slate-950/80">
 			<div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-4 py-3 sm:px-6 md:py-4">
 				<Link
-					className="text-lg font-semibold tracking-tight bg-gradient-to-r from-purple-500 to-pink-400 bg-clip-text text-transparent"
+					className="text-lg font-semibold tracking-tight bg-gradient-to-r from-[#fce28b] via-[#f4c94c] to-[#d6932d] bg-clip-text text-transparent"
 					href="/"
 				>
 					Leet Royale
@@ -56,7 +56,7 @@ function SignOutButton() {
 		<Button
 			type="button"
 			size="sm"
-			className="bg-gradient-to-r from-purple-500 to-pink-400 text-white shadow hover:from-purple-600 hover:to-pink-500"
+			className="bg-gradient-to-r from-[#f7d354] via-[#f0b429] to-[#d98e2b] text-slate-900 shadow hover:from-[#fbe08e] hover:via-[#f2c15a] hover:to-[#e0a040]"
 			onClick={() =>
 				void signOut().then(() => {
 					router.push("/signin");

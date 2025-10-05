@@ -1,27 +1,22 @@
 "use client";
 
-import {
-	Badge,
-	Box,
-	Button,
-	Flex,
-	Heading,
-	HStack,
-	Link,
-	NativeSelect,
-	Stack,
-	Text,
-	VStack,
-	Wrap,
-	WrapItem,
-} from "@chakra-ui/react";
-import { useMutation } from "convex/react";
 import dynamic from "next/dynamic";
-import type { ChangeEvent } from "react";
+import Link from "next/link";
+import { useMutation } from "convex/react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { useGameConnection } from "@/components/useGameConnection";
 import { useProblemDetails } from "@/components/useProblemDetails";
-import { useColorModeValue } from "@/components/ui/color-mode";
 import type { CodeSnippet } from "leetcode-query";
 import { api } from "@/convex/_generated/api";
 import type { editor as MonacoEditorNS, IDisposable } from "monaco-editor";
@@ -200,9 +195,9 @@ export default function GameSession({ slug }: { slug: string }) {
 		setCode(value ?? "");
 	};
 
-	const handleLanguageChange = (event: ChangeEvent<HTMLSelectElement>) => {
+	const handleLanguageChange = (value: string) => {
 		userEditedRef.current = false;
-		setSelectedLanguage(event.target.value);
+		setSelectedLanguage(value);
 	};
 
 	const handleRun = () => {
@@ -263,69 +258,48 @@ export default function GameSession({ slug }: { slug: string }) {
 			? problemErrorObject.message
 			: "Failed to load problem details";
 
-	const appBg = useColorModeValue("gray.50", "gray.950");
-	const headerBg = useColorModeValue("white", "gray.900");
-	const borderColor = useColorModeValue("gray.200", "gray.700");
-	const surfaceBg = useColorModeValue("white", "gray.900");
-	const mutedText = useColorModeValue("gray.600", "gray.400");
-	const chipBg = useColorModeValue("gray.100", "gray.800");
-	const outputBg = useColorModeValue("gray.100", "gray.800");
-
 	return (
-		<Flex direction="column" minH="100vh" bg={appBg}>
-			<Box
-				as="header"
-				borderBottomWidth="1px"
-				borderColor={borderColor}
-				bg={headerBg}
-				px={{ base: 4, md: 8 }}
-				py={4}
-			>
-				<Flex
-					direction={{ base: "column", md: "row" }}
-					gap={4}
-					justify="space-between"
-					align={{ base: "flex-start", md: "center" }}
-				>
-				<Stack gap={2} align="flex-start">
-						<Heading size="lg">{game?.name ?? `Game ${resolvedSlug}`}</Heading>
-						<Text fontSize="sm" color={mutedText}>
+		<div className="flex min-h-screen flex-col bg-background">
+			<header className="border-b border-border bg-card px-4 py-4 md:px-8">
+				<div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+					<div className="flex flex-col gap-2">
+						<h1 className="text-lg font-semibold">{game?.name ?? `Game ${resolvedSlug}`}</h1>
+						<p className="text-sm text-muted-foreground">
 							Status: {game?.status ?? "creating"}
-						</Text>
-					<HStack gap={3} wrap="wrap">
-							<Text fontSize="sm" color={mutedText}>
-								Problem: <Text as="span" color="inherit">{problemTitle}</Text>
-							</Text>
+						</p>
+						<div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+							<p>
+								Problem:{" "}
+								<span className="text-foreground">{problemTitle}</span>
+							</p>
 							{difficultyLabel && (
 								<Badge
-									colorScheme={difficultyColorScheme(difficultyLabel)}
-									variant="subtle"
-									fontSize="0.65rem"
-									textTransform="uppercase"
-									px={2}
-									py={1}
+									className={cn(
+										"px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-wide",
+										difficultyBadgeClasses(difficultyLabel),
+									)}
 								>
 									{difficultyLabel}
 								</Badge>
 							)}
-						</HStack>
-					</Stack>
-				<Stack gap={2} align="flex-end">
-					<HStack gap={3} fontSize="sm" color={mutedText}>
-							<Text fontWeight="semibold" color="blue.500">
+						</div>
+					</div>
+					<div className="flex flex-col items-end gap-2 text-sm text-muted-foreground">
+						<div className="flex flex-wrap items-center gap-3">
+							<span className="font-semibold text-primary">
 								Live participants: {presenceCount}
-							</Text>
-							<Text>You are connected as {clientId.slice(0, 8)}</Text>
-						</HStack>
+							</span>
+							<span>You are connected as {clientId.slice(0, 8)}</span>
+						</div>
 						{game?.status === "countdown" && countdownSeconds !== null && (
-							<Text fontWeight="semibold">
+							<p className="font-semibold text-foreground">
 								Game starting in {countdownSeconds}s
-							</Text>
+							</p>
 						)}
 						{game?.status === "lobby" && (
-							<Text fontSize="sm" color={mutedText}>
+							<p className="text-muted-foreground">
 								Waiting for the host to begin the game…
-							</Text>
+							</p>
 						)}
 						<Button
 							variant="outline"
@@ -344,256 +318,164 @@ export default function GameSession({ slug }: { slug: string }) {
 						>
 							{copied ? "Copied!" : "Share game link"}
 						</Button>
-					</Stack>
-				</Flex>
-			</Box>
-			<Flex
-				flex="1"
-				direction={{ base: "column", lg: "row" }}
-				gap={{ base: 6, xl: 8 }}
-				px={{ base: 4, md: 8 }}
-				py={{ base: 6, md: 8 }}
-			>
-				<Box
-					borderWidth="1px"
-					borderColor={borderColor}
-					bg={surfaceBg}
-					rounded="lg"
-					overflow="hidden"
-					maxH={{ base: "auto", lg: "calc(100vh - 200px)" }}
-					flex={{ base: "none", lg: "0 0 38%" }}
-					display="flex"
-					flexDirection="column"
-				>
-					<Flex
-						align="center"
-						justify="space-between"
-						px={4}
-						py={3}
-						borderBottomWidth="1px"
-						borderColor={borderColor}
-					>
-						<Text fontSize="sm" fontWeight="semibold" textTransform="uppercase" letterSpacing="wide">
+					</div>
+				</div>
+			</header>
+			<div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-8 lg:flex-row xl:gap-8">
+				<div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card lg:max-h-[calc(100vh-200px)] lg:basis-[38%] lg:shrink-0">
+					<div className="flex items-center justify-between border-b border-border px-4 py-3">
+						<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
 							Description
-						</Text>
+						</p>
 						{problemSlug && (
-						<Link
-							href={`https://leetcode.com/problems/${problemSlug}/`}
-							target="_blank"
-							rel="noreferrer"
-							fontSize="xs"
-							textDecoration="underline"
-						>
+							<Link
+								href={`https://leetcode.com/problems/${problemSlug}/`}
+								target="_blank"
+								rel="noreferrer"
+								className="text-xs text-primary underline-offset-4 hover:underline"
+							>
 								View on LeetCode
 							</Link>
 						)}
-					</Flex>
-					<Box flex="1" overflowY="auto" px={4} py={4} fontSize="sm">
+					</div>
+					<div className="flex-1 overflow-y-auto px-4 py-4 text-sm">
 						{problemSlug === null && (
-							<Text color={mutedText}>
+							<p className="text-muted-foreground">
 								This lobby is not linked to a LeetCode problem yet.
-							</Text>
+							</p>
 						)}
 						{problemSlug !== null && problemPending && (
-							<Text color={mutedText}>Loading problem details…</Text>
+							<p className="text-muted-foreground">Loading problem details…</p>
 						)}
 						{problemSlug !== null && problemError && !problemPending && (
-							<Text color="red.400">
+							<p className="text-destructive">
 								Failed to load problem details: {problemErrorMessage}
-							</Text>
+							</p>
 						)}
 						{problemSlug !== null && !problemPending && !problemError && (
-							<VStack align="stretch" gap={4}>
-							<HStack gap={3} wrap="wrap" fontSize="xs" color={mutedText}>
-									{acceptance && <Text>Acceptance: {acceptance}</Text>}
-									{typeof problem?.likes === "number" && <Text>Likes: {problem.likes}</Text>}
-									{typeof problem?.dislikes === "number" && <Text>Dislikes: {problem.dislikes}</Text>}
+							<div className="flex flex-col gap-4">
+								<div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-muted-foreground">
+									{acceptance && <span>Acceptance: {acceptance}</span>}
+									{typeof problem?.likes === "number" && <span>Likes: {problem.likes}</span>}
+									{typeof problem?.dislikes === "number" && <span>Dislikes: {problem.dislikes}</span>}
 									{totalAccepted !== null && (
-										<Text>Accepted: {totalAccepted.toLocaleString()}</Text>
+										<span>Accepted: {totalAccepted.toLocaleString()}</span>
 									)}
 									{totalSubmission !== null && (
-										<Text>Submissions: {totalSubmission.toLocaleString()}</Text>
+										<span>Submissions: {totalSubmission.toLocaleString()}</span>
 									)}
-								</HStack>
+								</div>
 								{topicTags.length > 0 && (
-								<Wrap gap={2}>
+									<div className="flex flex-wrap gap-2">
 										{topicTags.map((tag, index) => (
-											<WrapItem key={`${tag.slug ?? tag.name ?? "tag"}-${index}`}>
-												<Box
-													bg={chipBg}
-													px={2}
-													py={1}
-													rounded="full"
-													fontSize="xs"
-												>
-													{tag.name ?? tag.slug ?? "Unknown tag"}
-												</Box>
-											</WrapItem>
+											<span
+												key={`${tag.slug ?? tag.name ?? "tag"}-${index}`}
+												className="rounded-full bg-muted px-2 py-1 text-xs"
+											>
+												{tag.name ?? tag.slug ?? "Unknown tag"}
+											</span>
 										))}
-									</Wrap>
+									</div>
 								)}
-							<Box
-								css={{
-										"& h1, & h2, & h3, & h4": {
-											fontWeight: "semibold",
-											mt: 4,
-											mb: 2,
-										},
-										"& p": { mb: 3, lineHeight: 1.7 },
-										"& ul, & ol": { pl: 4, mb: 3 },
-										"& li": { mb: 1.5 },
-								}}
+								<div
+									className="text-sm leading-7 [&_h1]:mb-2 [&_h1]:mt-4 [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:font-semibold [&_h4]:mb-2 [&_h4]:mt-4 [&_h4]:font-semibold [&_p]:mb-3 [&_ul]:ml-4 [&_ul]:mb-3 [&_ol]:ml-4 [&_ol]:mb-3 [&_li]:mb-1.5"
 									// biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized LeetCode markup
 									dangerouslySetInnerHTML={{ __html: sanitizedContent }}
 								/>
 								{(sampleTestCase || exampleTestcases) && (
-									<Box>
-										<Text
-											fontSize="xs"
-											fontWeight="semibold"
-											textTransform="uppercase"
-											letterSpacing="wide"
-											mb={2}
-											color={mutedText}
-										>
+									<div className="space-y-2">
+										<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
 											Sample Testcases
-										</Text>
-										<Box
-											bg={chipBg}
-											rounded="md"
-											px={3}
-											py={2}
-											fontSize="xs"
-											fontFamily="mono"
-											whiteSpace="pre-wrap"
-										>
+										</p>
+										<div className="rounded-md bg-muted px-3 py-2 font-mono text-xs">
 											{sampleTestCase ?? exampleTestcases}
-										</Box>
-									</Box>
+										</div>
+									</div>
 								)}
-							</VStack>
+							</div>
 						)}
-					</Box>
-				</Box>
-				<Flex
-					flex="1"
-					direction="column"
-					borderWidth="1px"
-					borderColor={borderColor}
-					bg={surfaceBg}
-					rounded="lg"
-					overflow="hidden"
-					minH={{ base: "520px", lg: "auto" }}
-				>
-					<Flex
-						align={{ base: "flex-start", sm: "center" }}
-						justify="space-between"
-						gap={4}
-						px={4}
-						py={3}
-						borderBottomWidth="1px"
-						borderColor={borderColor}
-						flexWrap="wrap"
-					>
-						<Stack gap={1} minW="200px">
-							<Text fontSize="xs" fontWeight="semibold" textTransform="uppercase" letterSpacing="wide">
-								Language
-							</Text>
-							<NativeSelect.Root
-								size="sm"
-								disabled={codeSnippets.length === 0}
+					</div>
+				</div>
+				<div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">
+					<div className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-4 py-3 sm:items-center">
+						<div className="flex min-w-[200px] flex-col gap-1">
+							<Label
+								htmlFor={languageSelectId}
+								className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
 							>
-								<NativeSelect.Field
-									id={languageSelectId}
-									value={selectedLanguage ?? ""}
-									onChange={handleLanguageChange}
-								>
-									{codeSnippets.length === 0 && (
-										<option value="">No snippets available</option>
-									)}
+								Language
+							</Label>
+							<Select
+								disabled={codeSnippets.length === 0}
+								value={selectedLanguage ?? undefined}
+								onValueChange={handleLanguageChange}
+							>
+								<SelectTrigger id={languageSelectId} className="w-48">
+									<SelectValue placeholder="No snippets available" />
+								</SelectTrigger>
+								<SelectContent>
 									{codeSnippets.map((snippet) => (
-										<option
-											key={`${snippet.langSlug ?? snippet.lang ?? "language"}`}
-											value={snippet.langSlug ?? ""}
-										>
+										<SelectItem key={snippet.langSlug} value={snippet.langSlug}>
 											{snippet.lang ?? snippet.langSlug ?? "Language"}
-										</option>
+										</SelectItem>
 									))}
-								</NativeSelect.Field>
-								<NativeSelect.Indicator />
-							</NativeSelect.Root>
-						</Stack>
-						<HStack gap={3}>
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="flex items-center gap-3">
 							<Button variant="outline" size="sm" onClick={handleRun}>
 								Run
 							</Button>
-							<Button colorScheme="blue" size="sm" onClick={handleSubmit}>
+							<Button size="sm" onClick={handleSubmit}>
 								Submit
 							</Button>
-						</HStack>
-					</Flex>
-					<Box flex="1" minH={{ base: "320px", md: "440px" }}>
+						</div>
+					</div>
+					<div className="min-h-[320px] flex-1 md:min-h-[440px]">
 						<MonacoEditor
 							height="100%"
 							language={mapLangSlugToMonaco(selectedLanguage)}
 							value={code}
 							onChange={handleEditorChange}
-				onMount={handleEditorMount}
+							onMount={handleEditorMount}
 							options={{
 								automaticLayout: true,
 								fontSize: 14,
 								minimap: { enabled: false },
 								scrollBeyondLastLine: false,
-						}}
+							}}
 							theme="vs-dark"
 							loading={
-								<Box p={4} fontSize="sm" color={mutedText}>
+								<div className="p-4 text-sm text-muted-foreground">
 									Editor loading…
-								</Box>
+								</div>
 							}
 						/>
-					</Box>
-					<Box borderTopWidth="1px" borderColor={borderColor} bg={surfaceBg} px={4} py={3}>
-						<Text
-							fontSize="xs"
-							fontWeight="semibold"
-							textTransform="uppercase"
-							letterSpacing="wide"
-							color={mutedText}
-						>
+					</div>
+					<div className="border-t border-border px-4 py-3">
+						<p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
 							Output
-						</Text>
-						<Box
-							mt={2}
-							height={28}
-							overflowY="auto"
-							bg={outputBg}
-							px={3}
-							py={2}
-							rounded="md"
-							fontSize="xs"
-							fontFamily="mono"
-							whiteSpace="pre-wrap"
-						>
+						</p>
+						<div className="mt-2 h-28 overflow-y-auto rounded-md bg-muted px-3 py-2 font-mono text-xs">
 							{output}
-						</Box>
-					</Box>
-				</Flex>
-			</Flex>
-		</Flex>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
 	);
 }
 
-function difficultyColorScheme(difficulty: string) {
+function difficultyBadgeClasses(difficulty: string) {
 	switch (difficulty) {
 		case "Easy":
-			return "green";
+			return "border-transparent bg-emerald-500/15 text-emerald-600 dark:bg-emerald-400/20 dark:text-emerald-200";
 		case "Medium":
-			return "orange";
+			return "border-transparent bg-amber-500/15 text-amber-600 dark:bg-amber-400/20 dark:text-amber-200";
 		case "Hard":
-			return "red";
+			return "border-transparent bg-rose-500/20 text-rose-600 dark:bg-rose-500/25 dark:text-rose-200";
 		default:
-			return "gray";
+			return "border-transparent bg-muted text-muted-foreground";
 	}
 }
 

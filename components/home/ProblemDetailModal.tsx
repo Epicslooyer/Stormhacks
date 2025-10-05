@@ -97,21 +97,21 @@ export function ProblemDetailModal({
 							Failed to load problem details: {modalError}
 						</p>
 					)}
-					{!isPending && !isError && (
-						<div className="space-y-4">
-							{topicTags.length > 0 && (
-								<div className="flex flex-wrap items-center gap-2">
-									{topicTags.map((tag) => (
-										<Badge
-											key={String(tag?.slug ?? tag?.name)}
-											variant="secondary"
-											className="rounded-full border border-purple-200/50 bg-purple-50/70 px-3 py-1 text-xs font-medium text-purple-700 dark:border-purple-500/30 dark:bg-purple-500/15 dark:text-purple-100"
-										>
-											{String(tag?.name ?? tag?.slug)}
-										</Badge>
-									))}
-								</div>
-							)}
+				{!isPending && !isError && (
+					<div className="space-y-4">
+						{topicTags.length > 0 && (
+							<div className="flex flex-wrap items-center gap-2">
+								{topicTags.map((tag) => (
+									<Badge
+										key={String(tag?.slug ?? tag?.name)}
+										variant="secondary"
+										className="rounded-full border border-amber-300/60 bg-amber-100/80 px-3 py-1 text-xs font-medium text-[#0d2f6f] dark:border-amber-400/40 dark:bg-amber-400/20 dark:text-[#f8e7a3]"
+									>
+										{String(tag?.name ?? tag?.slug)}
+									</Badge>
+								))}
+							</div>
+						)}
 							{(totalSubmissions !== null || totalAccepted !== null) && (
 								<p className="text-xs text-slate-500 dark:text-slate-400">
 									{totalAccepted !== null && `Accepted: ${totalAccepted.toLocaleString()} · `}
