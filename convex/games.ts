@@ -168,8 +168,8 @@ export const beginCountdown = mutation({
 			.collect();
 		const activePresences = presences.filter((presence) => presence.updatedAt >= cutoff);
 		
-		if (activePresences.length < 2) {
-			throw new Error("Need at least 2 players to start the game");
+		if (activePresences.length < 1) {
+			throw new Error("Need at least 1 player to start the game");
 		}
 		
 		const readyCount = activePresences.filter((presence) => presence.isReady === true).length;
