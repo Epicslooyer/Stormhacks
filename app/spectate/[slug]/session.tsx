@@ -2,7 +2,7 @@
 
 import { useQuery } from "convex/react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api } from "@/convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,8 @@ type SpectatorView = VisibleParticipant & {
 	code: string;
 	language: string | null;
 	cursorLabel: string;
+	cursorLine: number | null;
+	cursorColumn: number | null;
 	isEliminated: boolean;
 	lastCodeUpdated: number | null;
 };
@@ -150,11 +152,15 @@ export default function SpectateSession({ slug }: { slug: string }) {
 			const cursorLabel = cursor
 				? `Cursor @ line ${cursor.lineNumber}, col ${cursor.column}`
 				: "Cursor: unavailable";
+			const cursorLine = cursor?.lineNumber ?? null;
+			const cursorColumn = cursor?.column ?? null;
 			return {
 				...participant,
 				code,
 				language,
 				cursorLabel,
+				cursorLine,
+				cursorColumn,
 				isEliminated: eliminatedSet.has(participant.key),
 				lastCodeUpdated,
 			};
@@ -169,6 +175,56 @@ export default function SpectateSession({ slug }: { slug: string }) {
 			spectatorViews.find((view) => view.clientId === selectedClientId) ?? null
 		);
 	}, [selectedClientId, spectatorViews]);
+
+	const renderCodeContent = (
+		view: SpectatorView,
+		includeLanguageHeader = false,
+	) => {
+		const nodes: ReactNode[] = [];
+		if (includeLanguageHeader && view.language) {
+			nodes.push(
+				<Fragment key="language-header">{`// ${view.language}\n`}</Fragment>,
+			);
+		}
+
+		const lines = view.code.split("\n");
+		const cursorLineIndex =
+			view.cursorLine !== null
+				? Math.max(
+					0,
+					Math.min(view.cursorLine - 1, Math.max(lines.length - 1, 0)),
+				 )
+				: null;
+		const cursorColumnIndex =
+			view.cursorColumn !== null ? Math.max(0, view.cursorColumn - 1) : null;
+		const hasCursor =
+			cursorLineIndex !== null && cursorColumnIndex !== null && lines.length > 0;
+
+		lines.forEach((line, index) => {
+			if (hasCursor && cursorLineIndex === index) {
+				const column = Math.min(cursorColumnIndex, line.length);
+				const before = line.slice(0, column);
+				const after = line.slice(column);
+				nodes.push(
+					<Fragment key={`line-${index}`}>
+						{before}
+						<span className="text-red-500">▋</span>
+						{after === "" ? " " : after}
+						{index < lines.length - 1 ? "\n" : ""}
+					</Fragment>,
+				);
+			} else {
+				nodes.push(
+					<Fragment key={`line-${index}`}>
+						{line}
+						{index < lines.length - 1 ? "\n" : ""}
+					</Fragment>,
+				);
+			}
+		});
+
+		return nodes;
+	};
 
 	const countdownActive = status === "countdown" && countdownSeconds !== null;
 	const statusLabelMap: Record<string, string> = {
@@ -332,8 +388,7 @@ export default function SpectateSession({ slug }: { slug: string }) {
 										</div>
 					<pre className="mt-4 max-h-44 overflow-auto rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
 						<code>
-							{participant.language ? `// ${participant.language}\n` : ""}
-							{participant.code}
+							{renderCodeContent(participant, true)}
 						</code>
 										</pre>
 										<div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
@@ -527,8 +582,7 @@ export default function SpectateSession({ slug }: { slug: string }) {
 							</div>
 				<pre className="max-h-[60vh] overflow-auto rounded-md bg-muted px-4 py-3 text-sm leading-relaxed text-foreground">
 					<code>
-						{selectedView.language ? `// ${selectedView.language}\n` : ""}
-						{selectedView.code}
+						{renderCodeContent(selectedView, true)}
 					</code>
 							</pre>
 							{selectedView.isEliminated && (
@@ -547,42 +601,42 @@ export default function SpectateSession({ slug }: { slug: string }) {
 				</DialogContent>
 			</Dialog>
 			<Dialog open={fullscreenOpen} onOpenChange={setFullscreenOpen}>
-		<DialogContent
+				<DialogContent
 					showCloseButton={false}
-			className="left-0 top-0 h-screen max-h-screen w-screen max-w-screen translate-x-0 translate-y-0 rounded-none border-0 bg-background/95 p-6 sm:p-10"
+					fullScreen
+				className="bg-background/95 p-3 sm:p-6"
 				>
 					<DialogHeader className="sr-only">
 						<DialogTitle>Spectator fullscreen grid</DialogTitle>
 					</DialogHeader>
-					<div className="flex h-full flex-col gap-6">
-						<div className="flex flex-wrap items-center justify-between gap-4">
-							<div className="space-y-1">
-								<h2 className="text-2xl font-semibold">Spectator wall</h2>
-								<p className="text-sm text-muted-foreground">
-									Projected grid view of all {spectatorViews.length} participants.
-								</p>
+				<div className="flex h-full flex-col gap-3 overflow-hidden">
+					<div className="flex justify-end">
+						<Button
+							type="button"
+							variant="ghost"
+							size="sm"
+							onClick={() => setFullscreenOpen(false)}
+						>
+							Exit fullscreen
+						</Button>
+					</div>
+					<div className="flex-1 overflow-hidden rounded-lg bg-background/80 p-2 sm:p-4">
+						{spectatorViews.length === 0 ? (
+							<div className="flex h-full items-center justify-center text-lg text-muted-foreground">
+								No live participants available.
 							</div>
-							<Button type="button" variant="outline" onClick={() => setFullscreenOpen(false)}>
-								Exit fullscreen
-							</Button>
-						</div>
-						<div className="flex-1 overflow-hidden rounded-lg border border-border bg-card/60 p-4">
-							{spectatorViews.length === 0 ? (
-								<div className="flex h-full items-center justify-center text-lg text-muted-foreground">
-									No live participants available.
-								</div>
-							) : (
-								<div className="grid h-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-									{spectatorViews.map((participant) => (
-										<button
-											type="button"
-											key={`fullscreen-${participant.key}`}
-											onClick={() => {
-								setSelectedClientId(participant.clientId);
-												setViewerOpen(true);
-											}}
-											className="relative flex h-full flex-col justify-between overflow-hidden rounded-lg border border-border bg-background/90 p-4 text-left shadow transition hover:border-primary focus:outline-hidden focus:ring-4 focus:ring-primary/40"
-										>
+						) : (
+						<div className="grid h-full grid-cols-1 gap-2 overflow-auto md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+							{spectatorViews.map((participant) => (
+								<button
+									type="button"
+									key={`fullscreen-${participant.key}`}
+									onClick={() => {
+										setSelectedClientId(participant.clientId);
+										setViewerOpen(true);
+									}}
+									className="relative flex h-full flex-col justify-between overflow-hidden rounded-lg border border-border bg-background p-3 text-left transition focus:outline-hidden focus:ring-4 focus:ring-primary/40 sm:p-4"
+								>
 											<div className="flex items-center justify-between gap-3">
 												<div>
 													<p className="text-lg font-semibold text-foreground">
@@ -596,10 +650,9 @@ export default function SpectateSession({ slug }: { slug: string }) {
 													{participant.clientId.slice(0, 8)}
 												</Badge>
 											</div>
-						<pre className="mt-4 flex-1 overflow-auto rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+									<pre className="mt-4 flex-1 overflow-auto rounded-md bg-muted px-3 py-2 text-sm text-slate-900 dark:text-slate-100">
 							<code>
-								{participant.language ? `// ${participant.language}\n` : ""}
-								{participant.code}
+										{renderCodeContent(participant, true)}
 							</code>
 											</pre>
 											<div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
