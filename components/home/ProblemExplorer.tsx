@@ -124,8 +124,8 @@ export function ProblemExplorer({ sectionId }: { sectionId: string }) {
 							<h2 className="text-2xl font-semibold text-slate-900 dark:text-white md:text-3xl">
 								100 people enter the arena.
 							</h2>
-						<p className="text-sm text-slate-600 dark:text-slate-300 md:text-base">
-							Only one will advance to the next round of technical interviews.
+							<p className="text-sm text-slate-600 dark:text-slate-300 md:text-base">
+								Only one will advance to the next round of technical interviews.
 					</p>
 						</div>
 					</div>
