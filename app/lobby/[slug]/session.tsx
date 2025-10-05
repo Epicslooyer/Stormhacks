@@ -301,9 +301,9 @@ export default function LobbySession({ slug }: { slug: string }) {
 				)}
 
 								<Link href={`/game/${resolvedSlug}`}>
-									<Button variant="ghost" className="w-full">
-										View Game Page
-									</Button>
+															<Button variant="ghost" className="w-full">
+																Play solo mode
+															</Button>
 								</Link>
 							</div>
 						</CardContent>
