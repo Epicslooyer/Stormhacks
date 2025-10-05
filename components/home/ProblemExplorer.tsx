@@ -122,13 +122,11 @@ export function ProblemExplorer({ sectionId }: { sectionId: string }) {
 						</Badge>
 						<div className="max-w-3xl space-y-3">
 							<h2 className="text-2xl font-semibold text-slate-900 dark:text-white md:text-3xl">
-								Choose your battleground
+								100 people enter the arena.
 							</h2>
-							<p className="text-sm text-slate-600 dark:text-slate-300 md:text-base">
-								Search anything in the LeetCode dataset or jump into a curated
-								set of crowd-pleasing problems. Preview details before you
-								launch to keep teammates on the same page.
-							</p>
+						<p className="text-sm text-slate-600 dark:text-slate-300 md:text-base">
+							Only one will advance to the next round of technical interviews.
+					</p>
 						</div>
 					</div>
 					<div className="space-y-4">
